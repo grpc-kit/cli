@@ -1,0 +1,8 @@
+global:
+  api_endpoint: "api.grpc-kit.com"
+  git_domain: "github.com"
+  product_code: "demo"
+
+template:
+  service:
+    api-version: "v1"
