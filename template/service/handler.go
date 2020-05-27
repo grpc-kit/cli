@@ -34,7 +34,8 @@ import (
 // Microservice 该微服务的结构
 type Microservice struct {
 	code    string                  // 服务代码
-	server  *rpc.Server             // 服务调用
+	server  *rpc.Server             // 服务定义
+	client  *rpc.Client             // 服务调用
 	logger  *logrus.Entry           // 全局日志
 	baseCfg *cfg.LocalConfig        // 基础配置
 	thisCfg *modeler.IndependentCfg // 个性配置
@@ -59,10 +60,13 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 	}
 
 	c := rpc.NewConfig(m.logger)
+	c.Authority = lc.Services.Namespace
 	c.GRPCAddress = lc.Services.GRPCAddress
 	c.HTTPAddress = lc.Services.HTTPAddress
+	c.APIEndpoint = lc.Services.APIEndpoint
 
-	m.server = rpc.NewServer(c, lc.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...))
+	m.server = rpc.NewServer(c)
+	m.client = rpc.NewClient(c)
 
 	// 其他私有的扩展操作
 	if err := m.privateExtended(); err != nil {
@@ -86,6 +90,14 @@ import (
 )
 
 func (m *Microservice) privateExtended() error {
+	clientOpts := m.baseCfg.GetClientDialOption()
+	clientUnaryHandlers := m.baseCfg.GetClientUnaryInterceptor()
+
+	m.client.UseDialOption(clientOpts...).
+		UseUnaryInterceptor(clientUnaryHandlers...)
+
+	m.server.UseServerOption(m.baseCfg.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...))
+
 	return nil
 }
 
