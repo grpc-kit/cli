@@ -133,10 +133,10 @@ import (
 
 // Register 用于服务启动前环境准备
 func (m *Microservice) Register(ctx context.Context) error {
-	pb.RegisterMicrotmplServer(m.server.Server(), m)
+	pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}Server(m.server.Server(), m)
 
 	// 注册服务信息
-	mux, err := m.baseCfg.Register(ctx, pb.RegisterMicrotmplHandlerFromEndpoint)
+	mux, err := m.baseCfg.Register(ctx, pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}HandlerFromEndpoint)
 	if err != nil {
 		return err
 	}
@@ -223,22 +223,21 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 package handler
 
 import (
-	"context"
+    "context"
 
-	"google.golang.org/grpc/codes"
-	hz "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/status"
+    "github.com/grpc-kit/pkg/errors"
+    hz "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // HealthCheck 用于健康检测
 func (m Microservice) HealthCheck(ctx context.Context, req *hz.HealthCheckRequest) (*hz.HealthCheckResponse, error) {
-	if req.Service == m.code {
-		return &hz.HealthCheckResponse{
-			Status: hz.HealthCheckResponse_SERVING,
-		}, nil
-	}
+    if req.Service == m.code {
+        return &hz.HealthCheckResponse{
+            Status: hz.HealthCheckResponse_SERVING,
+        }, nil
+    }
 
-	return nil, status.Error(codes.NotFound, "unknown service")
+    return nil, errors.NotFound(ctx).WithMessage("unknown service").Err()
 }
 `,
 	})

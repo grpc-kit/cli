@@ -62,6 +62,7 @@ module {{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}
 go 1.13
 
 require (
+    github.com/grpc-ecosystem/grpc-gateway v1.14.4
 	google.golang.org/grpc v1.26.0
 )
 `,
