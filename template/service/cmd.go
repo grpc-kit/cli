@@ -43,7 +43,7 @@ var (
 )
 
 func init() {
-	flagCfgFile = flag.StringP("config", "c", "./config/app.toml", "config file")
+	flagCfgFile = flag.StringP("config", "c", "./config/app.yaml", "config file")
 	flagVersion = flag.BoolP("version", "v", false, "print version and exit")
 	flag.Parse()
 
@@ -54,7 +54,6 @@ func init() {
 }
 
 func main() {
-	viper.SetConfigType("toml")
 	viper.SetConfigFile(*flagCfgFile)
 
 	if err := viper.ReadInConfig(); err == nil {

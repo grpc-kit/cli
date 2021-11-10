@@ -5,4 +5,4 @@ global:
 
 template:
   service:
-    api-version: "v1"
+    api_version: "v1"
