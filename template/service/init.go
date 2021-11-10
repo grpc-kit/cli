@@ -68,7 +68,7 @@ func (t *templateService) Generate() error {
 		}
 
 		err := file.WriteString(path.Join(t.config.Global.ShortName, f.name),
-			strings.TrimSpace(fileBody),
+			strings.TrimLeft(fileBody, "\n"),
 			perm)
 		if err != nil {
 			return err
