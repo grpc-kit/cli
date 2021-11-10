@@ -43,7 +43,7 @@ type Microservice struct {
 
 // NewMicroservice 全局只实例化一次
 func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
-	// 根据本地配置完成初始化
+	// 基础配置初始化
 	if err := lc.Init(); err != nil {
 		return nil, err
 	}
@@ -68,8 +68,13 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 	m.server = rpc.NewServer(c)
 	m.client = rpc.NewClient(c)
 
-	// 其他私有的扩展操作
+	// 其他个性扩展逻辑
 	if err := m.privateExtended(); err != nil {
+		return m, err
+	}
+
+	// 个性配置初始化
+	if err := m.thisCfg.Init(); err != nil {
 		return m, err
 	}
 
@@ -92,16 +97,23 @@ import (
 func (m *Microservice) privateExtended() error {
 	clientOpts := m.baseCfg.GetClientDialOption()
 	clientUnaryHandlers := m.baseCfg.GetClientUnaryInterceptor()
+	clientStreamHandlers := m.baseCfg.GetClientStreamInterceptor()
 
 	m.client.UseDialOption(clientOpts...).
-		UseUnaryInterceptor(clientUnaryHandlers...)
+		UseUnaryInterceptor(clientUnaryHandlers...).
+		UseStreamInterceptor(clientStreamHandlers...)
 
-	m.server.UseServerOption(m.baseCfg.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...))
+	m.server.UseServerOption(m.baseCfg.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...),
+		m.baseCfg.GetStreamInterceptor(m.privateStreamServerInterceptor()...))
 
 	return nil
 }
 
 func (m *Microservice) privateUnaryServerInterceptor() []grpc.UnaryServerInterceptor {
+	return nil
+}
+
+func (m *Microservice) privateStreamServerInterceptor() []grpc.StreamServerInterceptor {
 	return nil
 }
 
