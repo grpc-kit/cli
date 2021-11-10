@@ -11,6 +11,16 @@ Security    | 有关安全问题的修复
 
 ## [Unreleased]
 
+## [0.1.1] - 2021-11-10
+
+### Added
+
+- 添加pkg/errors的示例
+- 默认配置使用yaml格式
+- 更新依赖的grpc-gateway等几个版本
+- 根据product_code与short_name自动生成服务名称
+- 服务结构添加rpc.Client属性，用于调用其他依赖服务
+
 ## [0.1.0] - 2020-04-12
 
 ### Added
