@@ -34,7 +34,8 @@ import (
 // Microservice 该微服务的结构
 type Microservice struct {
 	code    string                  // 服务代码
-	server  *rpc.Server             // 服务调用
+	server  *rpc.Server             // 服务定义
+	client  *rpc.Client             // 服务调用
 	logger  *logrus.Entry           // 全局日志
 	baseCfg *cfg.LocalConfig        // 基础配置
 	thisCfg *modeler.IndependentCfg // 个性配置
@@ -42,7 +43,7 @@ type Microservice struct {
 
 // NewMicroservice 全局只实例化一次
 func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
-	// 根据本地配置完成初始化
+	// 基础配置初始化
 	if err := lc.Init(); err != nil {
 		return nil, err
 	}
@@ -59,13 +60,21 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 	}
 
 	c := rpc.NewConfig(m.logger)
+	c.Authority = lc.Services.Namespace
 	c.GRPCAddress = lc.Services.GRPCAddress
 	c.HTTPAddress = lc.Services.HTTPAddress
+	c.APIEndpoint = lc.Services.APIEndpoint
 
-	m.server = rpc.NewServer(c, lc.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...))
+	m.server = rpc.NewServer(c)
+	m.client = rpc.NewClient(c)
 
-	// 其他私有的扩展操作
+	// 其他个性扩展逻辑
 	if err := m.privateExtended(); err != nil {
+		return m, err
+	}
+
+	// 个性配置初始化
+	if err := m.thisCfg.Init(); err != nil {
 		return m, err
 	}
 
@@ -86,10 +95,25 @@ import (
 )
 
 func (m *Microservice) privateExtended() error {
+	clientOpts := m.baseCfg.GetClientDialOption()
+	clientUnaryHandlers := m.baseCfg.GetClientUnaryInterceptor()
+	clientStreamHandlers := m.baseCfg.GetClientStreamInterceptor()
+
+	m.client.UseDialOption(clientOpts...).
+		UseUnaryInterceptor(clientUnaryHandlers...).
+		UseStreamInterceptor(clientStreamHandlers...)
+
+	m.server.UseServerOption(m.baseCfg.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...),
+		m.baseCfg.GetStreamInterceptor(m.privateStreamServerInterceptor()...))
+
 	return nil
 }
 
 func (m *Microservice) privateUnaryServerInterceptor() []grpc.UnaryServerInterceptor {
+	return nil
+}
+
+func (m *Microservice) privateStreamServerInterceptor() []grpc.StreamServerInterceptor {
 	return nil
 }
 
@@ -121,10 +145,10 @@ import (
 
 // Register 用于服务启动前环境准备
 func (m *Microservice) Register(ctx context.Context) error {
-	pb.RegisterMicrotmplServer(m.server.Server(), m)
+	pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}Server(m.server.Server(), m)
 
 	// 注册服务信息
-	mux, err := m.baseCfg.Register(ctx, pb.RegisterMicrotmplHandlerFromEndpoint)
+	mux, err := m.baseCfg.Register(ctx, pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}HandlerFromEndpoint)
 	if err != nil {
 		return err
 	}
@@ -211,22 +235,21 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 package handler
 
 import (
-	"context"
+    "context"
 
-	"google.golang.org/grpc/codes"
-	hz "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/status"
+    "github.com/grpc-kit/pkg/errors"
+    hz "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // HealthCheck 用于健康检测
 func (m Microservice) HealthCheck(ctx context.Context, req *hz.HealthCheckRequest) (*hz.HealthCheckResponse, error) {
-	if req.Service == m.code {
-		return &hz.HealthCheckResponse{
-			Status: hz.HealthCheckResponse_SERVING,
-		}, nil
-	}
+    if req.Service == m.code {
+        return &hz.HealthCheckResponse{
+            Status: hz.HealthCheckResponse_SERVING,
+        }, nil
+    }
 
-	return nil, status.Error(codes.NotFound, "unknown service")
+    return nil, errors.NotFound(ctx).WithMessage("unknown service").Err()
 }
 `,
 	})

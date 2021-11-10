@@ -73,6 +73,7 @@ source scripts/env
 
 # 生成*.pb.go文件
 protoc -I./api/proto/${API_VERSION}/ \
+        -I/usr/local/include/ \
         -I${GOPATH}/src \
         -I${GOPATH}/src/github.com/gogo/googleapis/ \
         -I${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/ \
@@ -89,6 +90,7 @@ Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types:\
 
 # 生成*.pb.gw.go与swagger接口文档
 protoc -I./api/proto/${API_VERSION}/ \
+        -I/usr/local/include/ \
         -I${GOPATH}/src \
         -I${GOPATH}/src/github.com/gogo/googleapis/ \
         -I${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/ \
@@ -127,13 +129,13 @@ FROM {{IMAGE_FROM}}
 WORKDIR /opt
 
 COPY build/service /opt/service
-COPY config/app-sample.toml /opt/config/app.toml
+COPY config/app-sample.yaml /opt/config/app.yaml
 
 EXPOSE 10080/tcp
 EXPOSE 10081/tcp
 
 ENTRYPOINT [ "/opt/service" ]
-CMD [ "--config", "/opt/config/app.toml" ]
+CMD [ "--config", "/opt/config/app.yaml" ]
 `,
 	})
 

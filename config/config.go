@@ -33,7 +33,7 @@ type GlobalConfig struct {
 	// 服务的名称
 	ShortName string
 	// cli的版本
-	ReleaseVersion string `mapstructure:"release-version"`
+	ReleaseVersion string `mapstructure:"release_version"`
 }
 
 // Templates 用于表示各代码类型的模版配置结构

@@ -164,7 +164,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
 };
 
 // 该微服务支持的RPC方法定义
-service Microtmpl {
+service {{ title .Global.ProductCode }}{{ title .Global.ShortName }} {
     rpc HealthCheck(grpc.health.v1.HealthCheckRequest) returns (grpc.health.v1.HealthCheckResponse) {
         option (google.api.http) = {
             get: "/healthz"
