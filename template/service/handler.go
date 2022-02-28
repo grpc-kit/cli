@@ -24,7 +24,7 @@ func (t *templateService) fileDirectoryHandler() {
 package handler
 
 import (
-	"github.com/grpc-kit/cfg"
+	"github.com/grpc-kit/pkg/cfg"
 	"github.com/grpc-kit/pkg/rpc"
 	"github.com/sirupsen/logrus"
 
@@ -139,7 +139,7 @@ import (
 	"context"
 	"net/http"
 
-	"{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/api"
+	"{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/api/doc"
 	pb "{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/api/proto/{{ .Template.Service.APIVersion }}"
 )
 
@@ -154,7 +154,7 @@ func (m *Microservice) Register(ctx context.Context) error {
 	}
 
 	// 注册API文档
-	mux.Handle("/openapi-spec/", http.FileServer(api.Assets))
+    mux.Handle("/openapi-spec/", http.FileServer(http.FS(doc.Assets)))
 
 	// 这里添加其他自定义实现
 	m.privateHTTPHandle(mux)
@@ -185,7 +185,7 @@ import (
 
 	pb "{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/api/proto/{{ .Template.Service.APIVersion }}"
     "github.com/gogo/protobuf/types"
-    kitApiV1 "github.com/grpc-kit/api/proto/v1"
+    "github.com/grpc-kit/pkg/api"
 )
 
 // Demo test
@@ -194,7 +194,7 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 
 	result := &pb.DemoResponse{
 	    // GET /demo
-	    Content:  []*kitApiV1.ExampleResponse{
+	    Content:  []*api.ExampleResponse{
 	        {Name: "grpc-kit-cli"},
             {Name: "grpc-kit-cfg"},
             {Name: "grpc-kit-pkg"},
@@ -202,12 +202,12 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
             {Name: "grpc-kit-web"},
             {Name: "grpc-kit-doc"},
         },
-        Ping:  &kitApiV1.ExampleResponse{},
+        Ping:  &api.ExampleResponse{},
         // POST /demo
         // GET /demo/{uuid}
         Pong: &pb.DemoResponse_Pong{
 	        Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
-	        Pong: &kitApiV1.ExampleResponse{},
+	        Pong: &api.ExampleResponse{},
         },
         // DELETE /demo/{uuid}
         Empty: &types.Empty{},
