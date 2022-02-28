@@ -19,7 +19,7 @@ func (t *templateService) fileDirectoryConfig() {
 		name:  "config/app-dev-local.yaml",
 		parse: true,
 		body: `
-# https://github.com/grpc-kit/cfg/blob/master/app-sample.yaml
+# https://github.com/grpc-kit/pkg/blob/master/cfg/app-sample.yaml
 
 # 基础服务配置
 services:
@@ -56,8 +56,8 @@ security:
   # 认证：谁在登录
   authentication:
     # 跳过认证的rpc方法
-    #insecure_rpcs:
-    #  - SearchHosts
+    insecure_rpcs:
+      - HealthCheck
     #oidc_provider:
       #issuer: https://accounts.example.com
       #config:
@@ -123,7 +123,7 @@ independent:
 		name:  "config/app-sample.yaml",
 		parse: true,
 		body: `
-# https://github.com/grpc-kit/cfg/blob/master/app-sample.yaml
+# https://github.com/grpc-kit/pkg/blob/master/cfg/app-sample.yaml
 
 # 基础服务配置
 services:
