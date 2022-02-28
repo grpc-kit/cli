@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/grpc-kit/cfg"
+	"github.com/grpc-kit/pkg/cfg"
 	"github.com/grpc-kit/pkg/signal"
 	"github.com/grpc-kit/pkg/version"
 	flag "github.com/spf13/pflag"
