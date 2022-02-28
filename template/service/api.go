@@ -241,7 +241,7 @@ message DemoResponse {
         grpc.kit.api.proto.v1.ExampleResponse pong = 2;
     }
 
-    // Pong 放回创建的资源
+    // Pong 返回创建的资源
     Pong pong = 1;
 
     // Content 多个资源响应内容（无分页属性）
