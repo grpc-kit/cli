@@ -27,7 +27,6 @@ import (
 	"github.com/grpc-kit/pkg/cfg"
 	"github.com/grpc-kit/pkg/rpc"
 	"github.com/sirupsen/logrus"
-
 	"{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/modeler"
 )
 
