@@ -19,7 +19,7 @@ func (t *templateService) fileDirectoryConfig() {
 		name:  "config/app-dev-local.yaml",
 		parse: true,
 		body: `
-# https://github.com/grpc-kit/pkg/blob/master/cfg/app-sample.yaml
+# https://github.com/grpc-kit/pkg/blob/main/cfg/app-sample.yaml
 
 # 基础服务配置
 services:
