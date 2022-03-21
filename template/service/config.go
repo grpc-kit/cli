@@ -1,4 +1,4 @@
-// Copyright © 2020 Li MingQing <mingqing@henji.org>
+// Copyright © 2020 The gRPC Kit Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ func (t *templateService) fileDirectoryConfig() {
 		name:  "config/app-dev-local.yaml",
 		parse: true,
 		body: `
-# https://github.com/grpc-kit/pkg/blob/master/cfg/app-sample.yaml
+# https://github.com/grpc-kit/pkg/blob/main/cfg/app-sample.yaml
 
 # 基础服务配置
 services:
