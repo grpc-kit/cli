@@ -30,7 +30,7 @@ var newCmd = &cobra.Command{
 	Long: `Create a new code templates for your product. It will only be used when 
 it is newly created. For example:
 
-./grpc-kit-cli new -t service -p demo -s test
+./grpc-kit-cli new -t service -p opsaid -s test1
 `,
 	RunE:          runFuncNew,
 	SilenceUsage:  true,
