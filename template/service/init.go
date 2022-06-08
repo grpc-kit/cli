@@ -48,6 +48,7 @@ func (t *templateService) Generate() error {
 	t.fileDirectoryHandler()
 	t.fileDirectoryModeler()
 	t.fileDirectoryScripts()
+	t.fileDirectoryPublic()
 
 	var err error
 	for _, f := range t.files {
