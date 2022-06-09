@@ -55,10 +55,12 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 		thisCfg: &modeler.IndependentCfg{},
 	}
 
+	// 自定义配置实例化
 	if err := lc.GetIndependent(m.thisCfg); err != nil {
 		return m, err
 	}
 
+	// RPC客户端服务端
 	client, err := lc.GetRPCClient()
 	if err != nil {
 		return m, err
@@ -75,7 +77,7 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 		return m, err
 	}
 
-	// 个性配置初始化
+	// 自定义配置初始化
 	if err := m.thisCfg.Init(); err != nil {
 		return m, err
 	}
@@ -195,7 +197,7 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 	m.logger.Warnf("test demo warn: %v", "func Demo")
 
 	result := &pb.DemoResponse{
-	    // GET /demo
+	    // GET /api/demo
 	    Content:  []*api.ExampleResponse{
 	        {Name: "grpc-kit-cli"},
             {Name: "grpc-kit-cfg"},
@@ -205,13 +207,13 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
             {Name: "grpc-kit-doc"},
         },
         Ping:  &api.ExampleResponse{},
-        // POST /demo
-        // GET /demo/{uuid}
+        // POST /api/demo
+        // GET /api/demo/{uuid}
         Pong: &pb.DemoResponse_Pong{
 	        Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
 	        Pong: &api.ExampleResponse{},
         },
-        // DELETE /demo/{uuid}
+        // DELETE /api/demo/{uuid}
         Empty: &types.Empty{},
     }
 

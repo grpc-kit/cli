@@ -103,24 +103,24 @@ service {{ title .Global.ProductCode }}{{ title .Global.ShortName }} {
 
     rpc Demo(DemoRequest) returns (DemoResponse) {
         option (google.api.http) = {
-            post: "/demo"
+            post: "/api/demo"
             body: "*"
             response_body: "pong"
             additional_bindings {
-                get: "/demo"
+                get: "/api/demo"
                 response_body: "content"
             }
             additional_bindings {
-                get: "/demo/{uuid}"
+                get: "/api/demo/{uuid}"
                 response_body: "pong.pong"
             }
             additional_bindings {
-                put: "/demo/{uuid}"
+                put: "/api/demo/{uuid}"
                 body: "ping"
                 response_body: "ping"
             }
             additional_bindings {
-                delete: "/demo/{uuid}"
+                delete: "/api/demo/{uuid}"
                 response_body: "empty"
             }
         };
