@@ -28,13 +28,13 @@ services:
   # 服务注册的空间，全局统一
   namespace: example
   # 服务的代码，设置后不可变更
-  service_code: cmdb.v1.commons
+  service_code: {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
   # 接口网关的地址
-  api_endpoint: api.grpc-kit.com
+  api_endpoint: {{ .Global.APIEndpoint }}
   # 服务所监听的grpc地址（如未设置，自动监听在127.0.0.1的随机端口）
   grpc_address: 127.0.0.1:10081
   # 服务所监听的http地址（如未设置，则不开启gateway服务）
-  http_address: 127.0.0.1:10080
+  http_address: 127.0.0.1:8080
   # 服务注册，外部网络可连接的grpc地址（一般等同于grpc-address）
   public_address: ""
 
@@ -86,9 +86,9 @@ services:
   # 服务注册的空间，全局统一
   namespace: example
   # 服务的代码，设置后不可变更
-  service_code: cmdb.v1.commons
+  service_code: {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
   # 接口网关的地址
-  api_endpoint: api.grpc-kit.com
+  api_endpoint: {{ .Global.APIEndpoint }}
   # 服务所监听的grpc地址（如未设置，自动监听在127.0.0.1的随机端口）
   grpc_address: 127.0.0.1:10081
   # 服务所监听的http地址（如未设置，则不开启gateway服务）

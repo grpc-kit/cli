@@ -41,7 +41,8 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 
 	// 只在该command下生效的参数
-	newCmd.Flags().StringVar(&cfgType.Template.Service.APIVersion, "api-version", "v1alpha1", "api version, like: v1alpha1, v1beta1, v1")
+	newCmd.Flags().StringVar(&cfgType.Template.Service.APIVersion,
+		"api-version", "v1", "api version, like: v1alpha1, v1beta1, v1")
 }
 
 func runFuncNew(cmd *cobra.Command, args []string) error {
@@ -66,10 +67,14 @@ func runFuncNew(cmd *cobra.Command, args []string) error {
 	if !re.MatchString(cfgType.Global.ShortName) {
 		return fmt.Errorf("short-name: %v, not match regex", cfgType.Global.ShortName)
 	}
+	if cfgType.Global.Repository == "" || cfgType.Global.Repository == "git-domain/product-code/short-name" {
+		cfgType.Global.Repository = fmt.Sprintf("%v/%v/%v",
+			cfgType.Global.GitDomain, cfgType.Global.ProductCode, cfgType.Global.ShortName)
+	}
 
 	fmt.Println(
-		fmt.Sprintf("Generate code templates type: %v, use git repos: %v/%v/%v",
-			cfgType.Global.Type, cfgType.Global.GitDomain, cfgType.Global.ProductCode, cfgType.Global.ShortName))
+		fmt.Sprintf("Generate code templates type: %v, use git repos: %v",
+			cfgType.Global.Type, cfgType.Global.Repository))
 
 	t, err := template.New(cfgType)
 	if err != nil {

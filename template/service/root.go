@@ -60,7 +60,7 @@ api/doc/openapi-spec/*
 		name:  "go.mod",
 		parse: true,
 		body: `
-module {{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}
+module {{ .Global.Repository }}
 
 go 1.16
 

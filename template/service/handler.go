@@ -27,7 +27,8 @@ import (
 	"github.com/grpc-kit/pkg/cfg"
 	"github.com/grpc-kit/pkg/rpc"
 	"github.com/sirupsen/logrus"
-	"{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/modeler"
+
+	"{{ .Global.Repository }}/modeler"
 )
 
 // Microservice 该微服务的结构
@@ -138,8 +139,8 @@ import (
 	"context"
 	"net/http"
 
-	"{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/public/doc"
-	pb "{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
+	"{{ .Global.Repository }}/public/doc"
+	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
 )
 
 // Register 用于服务启动前环境准备
@@ -182,9 +183,10 @@ package handler
 import (
 	"context"
 
-	pb "{{ .Global.GitDomain }}/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
     "github.com/gogo/protobuf/types"
     "github.com/grpc-kit/pkg/api"
+
+	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
 )
 
 // Demo test

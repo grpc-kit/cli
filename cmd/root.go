@@ -61,6 +61,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgType.Global.GitDomain, "git-domain", "github.com", "the git domain name used to save this code")
 	rootCmd.PersistentFlags().StringVarP(&cfgType.Global.ProductCode, "product-code", "p", "", "the product code (must match regex \"^([a-z0-9]){4,}$\")")
 	rootCmd.PersistentFlags().StringVarP(&cfgType.Global.ShortName, "short-name", "s", "", "application name under the product (must match regex \"^([a-z0-9]){4,}$\")")
+	rootCmd.PersistentFlags().StringVarP(&cfgType.Global.Repository, "repository", "r", "git-domain/product-code/short-name", "name to use for go module (e.g., github.com/user/repo)")
 }
 
 // initConfig reads in config file and ENV variables if set.

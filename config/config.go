@@ -34,9 +34,11 @@ type GlobalConfig struct {
 	ShortName string
 	// cli的版本
 	ReleaseVersion string `mapstructure:"release_version"`
+	// 代码仓库地址
+	Repository string `mapstructure:"repository"`
 }
 
-// Templates 用于表示各代码类型的模版配置结构
+// TemplateConfig 用于表示各代码类型的模版配置结构
 type TemplateConfig struct {
 	Service TemplateService `mapstructure:"service"`
 }
