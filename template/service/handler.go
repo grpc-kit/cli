@@ -59,14 +59,16 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 		return m, err
 	}
 
-	c := rpc.NewConfig(m.logger)
-	c.Authority = lc.Services.Namespace
-	c.GRPCAddress = lc.Services.GRPCAddress
-	c.HTTPAddress = lc.Services.HTTPAddress
-	c.APIEndpoint = lc.Services.APIEndpoint
-
-	m.server = rpc.NewServer(c)
-	m.client = rpc.NewClient(c)
+	client, err := lc.GetRPCClient()
+	if err != nil {
+		return m, err
+	}
+	server, err := lc.GetRPCServer()
+	if err != nil {
+		return m, err
+	}
+	m.client = client
+	m.server = server
 
 	// 其他个性扩展逻辑
 	if err := m.privateExtended(); err != nil {
@@ -89,6 +91,7 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"google.golang.org/grpc"
@@ -118,11 +121,9 @@ func (m *Microservice) privateStreamServerInterceptor() []grpc.StreamServerInter
 }
 
 func (m *Microservice) privateHTTPHandle(mux *http.ServeMux) {
-	/*
-		mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
-			_, _ = fmt.Fprintf(w, "Hello Admin")
-		})
-	*/
+	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprintf(w, "")
+	})
 }
 `,
 	})

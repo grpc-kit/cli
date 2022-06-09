@@ -68,7 +68,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/grpc-kit/pkg v0.1.10
+	github.com/grpc-kit/pkg v0.1.11
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
@@ -349,8 +349,8 @@ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgf
 github.com/grpc-ecosystem/grpc-gateway v1.8.5/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
-github.com/grpc-kit/pkg v0.1.10 h1:5UlC5WfxRRikMLkPf2gewbilGiKJAA3jgNqGexbvXmc=
-github.com/grpc-kit/pkg v0.1.10/go.mod h1:sDGD7Gof8j3tIZf/RheJdORhxNqs6nAMqHnddXMsDQo=
+github.com/grpc-kit/pkg v0.1.11 h1:cd7Gp41imR+TkFBtjEn+9PtPh87EQS7bEOfKdy4iN40=
+github.com/grpc-kit/pkg v0.1.11/go.mod h1:sDGD7Gof8j3tIZf/RheJdORhxNqs6nAMqHnddXMsDQo=
 github.com/hashicorp/consul/api v1.12.0/go.mod h1:6pVBMo0ebnYdt2S3H87XhekM/HHrUoTD2XXb/VrZVy0=
 github.com/hashicorp/consul/sdk v0.8.0/go.mod h1:GBvyrGALthsZObzUGsfgHZQDXjg4lOjagTIwIR1vPms=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
