@@ -13,7 +13,8 @@ GIT_BRANCH 		:= $(shell git rev-parse --abbrev-ref HEAD)
 BUILD_DATE 		:= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE 	:= $(shell git --no-pager log -1 --format='%ct')
 RELEASE_VERSION ?= $(shell git describe --tags --dirty --always)
-BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
+BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/version.Appname=grpc-kit-cli' \
+	-X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
 	-X 'github.com/grpc-kit/pkg/version.GitBranch=${GIT_BRANCH}' \
 	-X 'github.com/grpc-kit/pkg/version.BuildDate=${BUILD_DATE}' \
 	-X 'github.com/grpc-kit/pkg/version.CommitUnixTime=${COMMIT_DATE}' \

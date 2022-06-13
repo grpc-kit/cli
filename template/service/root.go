@@ -1115,7 +1115,8 @@ Security    | 有关安全问题的修复
 	})
 
 	t.files = append(t.files, &templateFile{
-		name: "Makefile",
+		name:  "Makefile",
+		parse: true,
 		body: `
 .PHONY: precheck clean version proto
 
@@ -1139,7 +1140,8 @@ BUILD_DATE      := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE     := $(shell git --no-pager log -1 --format='%ct' 2>/dev/null)
 PREFIX_VERSION  := $(shell ./scripts/version.sh prefix)
 RELEASE_VERSION ?= $(shell ./scripts/version.sh release)
-BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/version.CliVersion=${CLI_VERSION}' \
+BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/version.Appname={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}' \
+                -X 'github.com/grpc-kit/pkg/version.CliVersion=${CLI_VERSION}' \
                 -X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
                 -X 'github.com/grpc-kit/pkg/version.GitBranch=${GIT_BRANCH}' \
                 -X 'github.com/grpc-kit/pkg/version.BuildDate=${BUILD_DATE}' \
