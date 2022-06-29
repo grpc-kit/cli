@@ -8,11 +8,11 @@ GOARCH          ?= $(shell ${GO} env GOARCH)
 GOBUILD         := ${GO} build
 
 # 自动化版本号
-GIT_COMMIT 		:= $(shell git rev-parse HEAD)
-GIT_BRANCH 		:= $(shell git rev-parse --abbrev-ref HEAD)
-BUILD_DATE 		:= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
-COMMIT_DATE 	:= $(shell git --no-pager log -1 --format='%ct')
-RELEASE_VERSION ?= $(shell git describe --tags --dirty --always)
+GIT_COMMIT	:= $(shell git rev-parse HEAD)
+GIT_BRANCH	:= $(shell git describe --tags --dirty --always)
+BUILD_DATE	:= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+COMMIT_DATE	:= $(shell git --no-pager log -1 --format='%ct')
+RELEASE_VERSION ?= $(shell cat VERSION)
 BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/version.Appname=grpc-kit-cli' \
 	-X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
 	-X 'github.com/grpc-kit/pkg/version.GitBranch=${GIT_BRANCH}' \
