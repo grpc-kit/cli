@@ -64,7 +64,7 @@ option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
         license:{
             name: "Apache License 2.0"
         }
-        version: "v0.0.0",
+        version: "0.0.0",
     },
     security_definitions: {
         security: {

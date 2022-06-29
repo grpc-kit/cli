@@ -161,11 +161,11 @@ function prefix() {
 }
 
 function release() {
-    TEMP=$(git describe --tags --dirty --always 2>/dev/null)
+    TEMP=$(cat VERSION)
     RELEASE_VERSION=$TEMP
 
     if test -z $RELEASE_VERSION; then
-        RELEASE_VERSION=v0.0.0
+        RELEASE_VERSION=$(git describe --tags --dirty --always 2>/dev/null)
     fi
 
     echo $RELEASE_VERSION
