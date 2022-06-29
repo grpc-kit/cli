@@ -1118,8 +1118,6 @@ sigs.k8s.io/yaml v1.2.0/go.mod h1:yfXDCHCao9+ENCvLSE62v9VSji2MKu5jeNfTrofGhJc=
 		name:  "Makefile",
 		parse: true,
 		body: `
-.PHONY: precheck clean version proto
-
 include scripts/env
 
 # 全局通用变量
@@ -1149,45 +1147,58 @@ BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/version.Appname={{ .Global.Short
                 -X 'github.com/grpc-kit/pkg/version.ReleaseVersion=${RELEASE_VERSION}'"
 
 # 构建Docker容器变量
+BUILD_GOOS      ?= $(shell ${GO} env GOOS)
 IMAGE_FROM      ?= scratch
 IMAGE_HOST      ?= hub.docker.com
-BUILD_GOOS      ?= $(shell ${GO} env GOOS)
+IMAGE_VERSION   ?= ${RELEASE_VERSION}
 
-precheck:
+.PHONY: help
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+##@ Check
+
+.PHONY: precheck
+precheck: ## Check environment.
 	@echo ">> precheck environment"
 	@./scripts/precheck.sh
 
-run: generate
-	@${GORUN} -ldflags ${BUILD_LD_FLAGS} cmd/server/main.go -c config/app-dev-local.yaml
+##@ Build
 
-build: clean generate
-	@mkdir build
-	@mkdir build/deploy
-	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
-
-clean:
-	@echo ">> clean build"
-	@rm -rf build/
-
-generate: precheck
+.PHONY: generate
+generate: precheck ## Generate code from proto files.
 	@echo ">> generation release version"
 	@./scripts/version.sh update
-
-	@echo ">> generation assets to static code"
-	@${GO} generate api/generate.go >> /dev/null
 
 	@echo ">> generation code from proto files"
 	@./scripts/genproto.sh
 
-build-docker: build
-	@echo ">> build docker"
+.PHONY: run
+run: generate ## Run a application from your host.
+	@${GORUN} -ldflags ${BUILD_LD_FLAGS} cmd/server/main.go -c config/app-dev-local.yaml
 
-	@IMAGE_FROM=${IMAGE_FROM} \
-	IMAGE_HOST=${IMAGE_HOST} \
-	NAMESPACE=${NAMESPACE} \
-	SHORTNAME=${SHORTNAME} \
-	RELEASE_VERSION=${RELEASE_VERSION} \
-	./scripts/docker.sh
+.PHONY: build
+build: clean generate ## Build application binary.
+	@mkdir build
+	@mkdir build/deploy
+	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
+
+.PHONY: docker-build
+docker-build: build ## Build docker image with the application.
+	@echo ">> docker build"
+	@IMAGE_FROM=${IMAGE_FROM} IMAGE_HOST=${IMAGE_HOST} NAMESPACE=${NAMESPACE} SHORTNAME=${SHORTNAME} IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh build
+
+.PHONY: docker-push
+docker-push:
+	@echo ">> docker push"
+	@IMAGE_HOST=${IMAGE_HOST} NAMESPACE=${NAMESPACE} SHORTNAME=${SHORTNAME} IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
+
+##@ Clean
+
+.PHONY: clean
+clean: ## Clean build.
+	@echo ">> clean build"
+	@rm -rf build/
 `,
 	})
 
