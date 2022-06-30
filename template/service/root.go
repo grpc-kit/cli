@@ -48,11 +48,7 @@ config/app-prod-*
 .idea/
 build/
 backup/
-scripts/env-dev-*.sh
-scripts/env-test-*.sh
-scripts/env-prod-*.sh
-api/assets_vfsdata.go
-api/doc/openapi-spec/*
+public/doc/openapi-spec/api/*
 `,
 	})
 
@@ -1189,7 +1185,7 @@ docker-build: build ## Build docker image with the application.
 	@IMAGE_FROM=${IMAGE_FROM} IMAGE_HOST=${IMAGE_HOST} NAMESPACE=${NAMESPACE} SHORTNAME=${SHORTNAME} IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh build
 
 .PHONY: docker-push
-docker-push:
+docker-push: ## Push docker image with the application.
 	@echo ">> docker push"
 	@IMAGE_HOST=${IMAGE_HOST} NAMESPACE=${NAMESPACE} SHORTNAME=${SHORTNAME} IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
 
