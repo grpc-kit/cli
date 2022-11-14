@@ -1124,7 +1124,7 @@ GOARCH          ?= $(shell ${GO} env GOARCH)
 GOBUILD         := ${GO} build
 WORKDIR         := $(shell pwd)
 GOHOSTOS        := $(shell ${GO} env GOHOSTOS)
-SHORTNAME       := $(shell basename $(shell pwd))
+SHORTNAME       ?= $(shell basename $(shell pwd))
 NAMESPACE       ?= $(shell basename $(shell cd ../;pwd))
 
 # 自动化版本号
