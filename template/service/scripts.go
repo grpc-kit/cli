@@ -32,7 +32,7 @@ CLI_VERSION={{ .Global.ReleaseVersion }}
 	t.files = append(t.files, &templateFile{
 		name: "scripts/docker.sh",
 		body: `
-#!/bin/sh
+#!/bin/bash
 
 if test -z $1; then
     echo "Usage:"
@@ -75,7 +75,7 @@ $1
 		name:  "scripts/genproto.sh",
 		parse: true,
 		body: `
-#!/bin/sh
+#!/bin/bash
 
 source scripts/env
 
@@ -117,7 +117,7 @@ Mgoogle/protobuf/struct.proto=github.com/gogo/protobuf/types:. \
 	t.files = append(t.files, &templateFile{
 		name: "scripts/precheck.sh",
 		body: `
-#!/bin/sh
+#!/bin/bash
 
 # 确保GOPATH变量有设置
 if test -z "${GOPATH}"; then
@@ -149,7 +149,7 @@ CMD [ "--config", "/opt/config/app.yaml" ]
 		name:  "scripts/version.sh",
 		parse: true,
 		body: `
-#!/bin/sh
+#!/bin/bash
 
 source scripts/env
 
