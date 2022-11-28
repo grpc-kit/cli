@@ -255,8 +255,8 @@ github.com/grpc-ecosystem/go-grpc-middleware v1.2.0/go.mod h1:mJzapYve32yjrKlk9G
 github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
 github.com/grpc-ecosystem/grpc-gateway v1.8.5/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
-github.com/grpc-kit/pkg v0.1.11 h1:cd7Gp41imR+TkFBtjEn+9PtPh87EQS7bEOfKdy4iN40=
-github.com/grpc-kit/pkg v0.1.11/go.mod h1:sDGD7Gof8j3tIZf/RheJdORhxNqs6nAMqHnddXMsDQo=
+github.com/grpc-kit/pkg v0.2.3 h1:tWDV8EVS+D1TwdItN3piiGrIPaCGZPcdiG5VAyw3wgU=
+github.com/grpc-kit/pkg v0.2.3/go.mod h1:sDGD7Gof8j3tIZf/RheJdORhxNqs6nAMqHnddXMsDQo=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
 github.com/hashicorp/consul/api v1.12.0/go.mod h1:6pVBMo0ebnYdt2S3H87XhekM/HHrUoTD2XXb/VrZVy0=
 github.com/hashicorp/consul/sdk v0.1.1/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
