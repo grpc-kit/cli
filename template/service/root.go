@@ -64,14 +64,13 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/grpc-kit/pkg v0.1.11
+	github.com/grpc-kit/pkg v0.2.3
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
 	google.golang.org/grpc v1.43.0
 )
-
 replace google.golang.org/grpc => google.golang.org/grpc v1.38.0
 `,
 	})
@@ -345,8 +344,8 @@ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgf
 github.com/grpc-ecosystem/grpc-gateway v1.8.5/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0 h1:gmcG1KaJ57LophUzW0Hy8NmPhnMZb4M0+kPpLofRdBo=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
-github.com/grpc-kit/pkg v0.1.11 h1:cd7Gp41imR+TkFBtjEn+9PtPh87EQS7bEOfKdy4iN40=
-github.com/grpc-kit/pkg v0.1.11/go.mod h1:sDGD7Gof8j3tIZf/RheJdORhxNqs6nAMqHnddXMsDQo=
+github.com/grpc-kit/pkg v0.2.3 h1:tWDV8EVS+D1TwdItN3piiGrIPaCGZPcdiG5VAyw3wgU=
+github.com/grpc-kit/pkg v0.2.3/go.mod h1:sDGD7Gof8j3tIZf/RheJdORhxNqs6nAMqHnddXMsDQo=
 github.com/hashicorp/consul/api v1.12.0/go.mod h1:6pVBMo0ebnYdt2S3H87XhekM/HHrUoTD2XXb/VrZVy0=
 github.com/hashicorp/consul/sdk v0.8.0/go.mod h1:GBvyrGALthsZObzUGsfgHZQDXjg4lOjagTIwIR1vPms=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
@@ -1146,7 +1145,14 @@ BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/version.Appname={{ .Global.Short
 BUILD_GOOS      ?= $(shell ${GO} env GOOS)
 IMAGE_FROM      ?= scratch
 IMAGE_HOST      ?= hub.docker.com
+IMAGE_NAME      ?= ${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}
 IMAGE_VERSION   ?= ${RELEASE_VERSION}
+
+# 部署与运行相关变量
+BUILD_ENV       ?= local
+DEPLOY_ENV      ?= dev
+
+##@ General
 
 .PHONY: help
 help: ## Display this help.
@@ -1159,9 +1165,15 @@ precheck: ## Check environment.
 	@echo ">> precheck environment"
 	@./scripts/precheck.sh
 
-##@ Build
+##@ Development
 
 .PHONY: generate
+manifests: ## Generate deployment manifests files.
+	@NAMESPACE=${NAMESPACE} \
+		IMAGE_NAME=${IMAGE_NAME} \
+		IMAGE_VERSION=${IMAGE_VERSION} \
+		BUILD_ENV=${BUILD_ENV} ./scripts/manifests.sh ${DEPLOY_ENV}
+
 generate: precheck ## Generate code from proto files.
 	@echo ">> generation release version"
 	@./scripts/version.sh update
@@ -1169,9 +1181,13 @@ generate: precheck ## Generate code from proto files.
 	@echo ">> generation code from proto files"
 	@./scripts/genproto.sh
 
-.PHONY: run
-run: generate ## Run a application from your host.
-	@${GORUN} -ldflags ${BUILD_LD_FLAGS} cmd/server/main.go -c config/app-dev-local.yaml
+fmt: ## Run go fmt against code.
+	go fmt ./...
+
+vet: ## Run go vet against code.
+	go vet ./...
+
+##@ Build
 
 .PHONY: build
 build: clean generate ## Build application binary.
@@ -1179,15 +1195,26 @@ build: clean generate ## Build application binary.
 	@mkdir build/deploy
 	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
 
+.PHONY: run
+run: generate ## Run a application from your host.
+	@${GORUN} -ldflags ${BUILD_LD_FLAGS} cmd/server/main.go -c config/app-dev-local.yaml
+
 .PHONY: docker-build
-docker-build: build ## Build docker image with the application.
+docker-build: build manifests ## Build docker image with the application.
 	@echo ">> docker build"
-	@IMAGE_FROM=${IMAGE_FROM} IMAGE_HOST=${IMAGE_HOST} NAMESPACE=${NAMESPACE} SHORTNAME=${SHORTNAME} IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh build
+	@IMAGE_FROM=${IMAGE_FROM} \
+		IMAGE_HOST=${IMAGE_HOST} \
+		NAMESPACE=${NAMESPACE} \
+		SHORTNAME=${SHORTNAME} \
+		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh build
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the application.
 	@echo ">> docker push"
-	@IMAGE_HOST=${IMAGE_HOST} NAMESPACE=${NAMESPACE} SHORTNAME=${SHORTNAME} IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
+	@IMAGE_HOST=${IMAGE_HOST} \
+		NAMESPACE=${NAMESPACE} \
+		SHORTNAME=${SHORTNAME} \
+		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
 
 ##@ Clean
 

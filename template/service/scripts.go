@@ -194,4 +194,246 @@ function update() {
 $1
 `,
 	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "scripts/manifests.sh",
+		parse: true,
+		body: `
+#!/bin/bash
+
+if test -z $1; then
+    echo "Usage:"
+    echo "\t ./scripts/manifests.sh dev"
+fi
+
+GOHOSTOS=$(go env GOHOSTOS)
+DEPLOY_ENV=$1
+
+# 生成的容器镜像地址
+IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
+
+function clean() {
+    rm -rf deploy/kubernetes/${DEPLOY_ENV}
+}
+
+function kubernetes() {
+    mkdir -p deploy/kubernetes/${DEPLOY_ENV}/
+    mkdir -p deploy/kubernetes/${DEPLOY_ENV}/config/configmap/
+    cp -rf scripts/templates/kubernetes/* deploy/kubernetes/${DEPLOY_ENV}/
+
+    if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
+        cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml deploy/kubernetes/${DEPLOY_ENV}/config/configmap/app.yaml
+    fi
+
+    if test ${GOHOSTOS} = "darwin"; then
+        sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+        sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+        sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+        sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+        sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+        sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+        sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+        sed -i "" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    else
+        sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+        sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+        sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+        sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+        sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+        sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+        sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+        sed -i "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    fi
+}
+
+clean
+kubernetes
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "scripts/templates/kubernetes/kustomization.yaml",
+		parse: true,
+		body: `
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: biz-DEPLOY_ENV-NAMESPACE
+
+commonLabels:
+  {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
+
+commonAnnotations:
+  {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
+
+configMapGenerator:
+- name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  files:
+  - app.yaml=config/configmap/app.yaml
+  options:
+    disableNameSuffixHash: true
+
+replicas:
+- name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  count: 1
+
+resources:
+- service/ingresses.yaml
+- service/services.yaml
+- workloads/deployment.yaml
+
+images:
+- name: IMAGE_NAME
+  newTag: IMAGE_VERSION
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "scripts/templates/kubernetes/service/ingresses.yaml",
+		parse: true,
+		body: `
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  #annotations:
+  #  nginx.ingress.kubernetes.io/proxy-body-size: 10m
+  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}.biz-DEPLOY_ENV-NAMESPACE.{{ .Global.APIEndpoint }}
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+            port:
+              number: 10080
+        pathType: Prefix
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "scripts/templates/kubernetes/service/services.yaml",
+		parse: true,
+		body: `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+spec:
+  ports:
+  - name: http
+    port: 10080
+    protocol: TCP
+    targetPort: 10080
+  - name: grpc
+    port: 10081
+    protocol: TCP
+    targetPort: 10081
+  sessionAffinity: None
+  type: ClusterIP
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "scripts/templates/kubernetes/workloads/deployment.yaml",
+		parse: true,
+		body: `
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+spec:
+  revisionHistoryLimit: 3
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 0%
+    type: RollingUpdate
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - /opt/service
+        - --config
+        - /opt/config/app.yaml
+        env:
+        - name: GRPC_KIT_PUHLIC_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        image: IMAGE_NAME:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 5
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          tcpSocket:
+            port: 10081
+          timeoutSeconds: 5
+        name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz?service={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
+            port: 10080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "4000m"
+            memory: 4048Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/config
+          name: config-volume
+        - mountPath: /opt/logs/applog
+          name: applog-volume
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - NET_ADMIN
+            - SYS_ADMIN
+            - NET_RAW
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsGroup: 65534
+        runAsUser: 65534
+        runAsNonRoot: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: config-volume
+        configMap:
+          defaultMode: 420
+          name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+      - name: applog-volume
+        emptyDir: {}
+`,
+	})
 }

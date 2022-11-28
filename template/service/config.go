@@ -27,7 +27,7 @@ services:
   root_path: service
   # 服务注册的空间，全局统一
   namespace: example
-  # 服务的代码，设置后不可变更
+  # 服务的代码，名称唯一且必填，格式：应用短名.接口版本.产品代码
   service_code: {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
   # 接口网关的地址
   api_endpoint: {{ .Global.APIEndpoint }}
@@ -35,8 +35,6 @@ services:
   grpc_address: 127.0.0.1:10081
   # 服务所监听的http地址（如未设置，则不开启gateway服务）
   http_address: 127.0.0.1:8080
-  # 服务注册，外部网络可连接的grpc地址（一般等同于grpc-address）
-  public_address: ""
 
 # 服务注册配置
 #discover:
@@ -49,23 +47,11 @@ services:
 security:
   enable: false
 
-# 关系数据配置
-database:
-  enable: false
-
-# 缓存服务配置
-cachebuf:
-  enable: false
-
 # 日志调试配置
 debugger:
   enable_pprof: true
   log_level: debug
   log_format: text
-
-# 链路追踪配置
-opentracing:
-  enable: false
 
 # 应用私有配置
 independent:
