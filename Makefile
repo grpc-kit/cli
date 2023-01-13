@@ -32,6 +32,11 @@ build: clean ## Build application binary.
 	@mkdir build
 	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli main.go
 
+.PHONY: docker-build
+docker-build: ## Build docker image with the application.
+	@echo ">> docker build"
+	@docker build ./ -t registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${RELEASE_VERSION}
+
 ##@ Clean
 
 .PHONY: clean
