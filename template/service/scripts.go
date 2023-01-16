@@ -34,8 +34,11 @@ CLI_VERSION={{ .Global.ReleaseVersion }}
 		body: `
 #!/bin/bash
 
+source scripts/env
+
 if test -z $1; then
     echo "Usage:"
+    echo "\t ./scripts/docker.sh run"
     echo "\t ./scripts/docker.sh build"
     echo "\t ./scripts/docker.sh push"
 fi
@@ -44,27 +47,37 @@ fi
 IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
 
 function build() {
-  # 如未设置父镜像，默认为scratch
-  if test -z ${IMAGE_FROM}; then
-      IMAGE_FROM=scratch
-  fi
+    # 如未设置父镜像，默认为scratch
+    if test -z ${IMAGE_FROM}; then
+        IMAGE_FROM=scratch
+    fi
 
-  cp scripts/templates/Dockerfile ./
+    cp scripts/templates/Dockerfile ./
 
-  GOHOSTOS=$(go env GOHOSTOS)
+    GOHOSTOS=$(go env GOHOSTOS)
 
-  if test ${GOHOSTOS} = "darwin"; then
-      sed -i "" "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
-  else
-      sed -i "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
-  fi
+    if test ${GOHOSTOS} = "darwin"; then
+        sed -i "" "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
+    else
+        sed -i "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
+    fi
 
-  docker build -t ${IMAGE_ADDR} ./
-  echo "Now you can upload image: "docker push ${IMAGE_ADDR}""
+    docker build -t ${IMAGE_ADDR} ./
+    echo "Now you can upload image: "docker push ${IMAGE_ADDR}""
 }
 
 function push() {
-  docker push ${IMAGE_ADDR}
+    docker push ${IMAGE_ADDR}
+}
+
+function run() {
+    docker run -i -t --rm \
+        -v $GOPATH/pkg:/go/pkg \
+        -v $(pwd):/usr/local/src \
+        -w /usr/local/src \
+        --network host \
+        registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${CLI_VERSION} \
+        make run
 }
 
 $1

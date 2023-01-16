@@ -1,9 +1,8 @@
 FROM golang:1.17.13-buster as builder
 
 # 设置环境变量
-ENV GO111MODULE=on \
-    GOPROXY="https://goproxy.cn" \
-    PATH=$PATH:/go/bin
+ENV GO111MODULE=on
+ENV GOPROXY="https://goproxy.cn"
 
 WORKDIR /usr/local/src
 
@@ -12,7 +11,11 @@ RUN go mod tidy && make build
 
 FROM golang:1.17.13-buster
 
-# 拷贝上阶段编译后的二进制
+# 设置环境变量
+ENV GO111MODULE=on
+ENV GOPROXY="https://goproxy.cn"
+
+# 拷贝上阶段编译后的文件
 COPY --from=builder /usr/local/src/build/grpc-kit-cli /go/bin/grpc-kit-cli
 
 # 系统使用非交互式模式

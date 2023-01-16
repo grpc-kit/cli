@@ -1199,6 +1199,10 @@ build: clean generate ## Build application binary.
 run: generate ## Run a application from your host.
 	@${GORUN} -ldflags ${BUILD_LD_FLAGS} cmd/server/main.go -c config/app-dev-local.yaml
 
+.PHONY: docker-run
+docker-run: ## Run a application from your docker.
+	@./scripts/docker.sh run
+
 .PHONY: docker-build
 docker-build: build manifests ## Build docker image with the application.
 	@echo ">> docker build"
