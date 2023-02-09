@@ -37,47 +37,46 @@ CLI_VERSION={{ .Global.ReleaseVersion }}
 source scripts/env
 
 if test -z $1; then
-    echo "Usage:"
-    echo "\t ./scripts/docker.sh run"
-    echo "\t ./scripts/docker.sh build"
-    echo "\t ./scripts/docker.sh push"
+  echo "Usage:"
+  echo "\t ./scripts/docker.sh build"
+  echo "\t ./scripts/docker.sh push"
 fi
 
 # 生成的容器镜像地址
 IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
 
 function build() {
-    # 如未设置父镜像，默认为scratch
-    if test -z ${IMAGE_FROM}; then
-        IMAGE_FROM=scratch
-    fi
+  # 如未设置父镜像，默认为scratch
+  if test -z ${IMAGE_FROM}; then
+    IMAGE_FROM=scratch
+  fi
 
-    cp scripts/templates/Dockerfile ./
+  cp scripts/templates/Dockerfile ./
 
-    GOHOSTOS=$(go env GOHOSTOS)
+  GOHOSTOS=$(go env GOHOSTOS)
 
-    if test ${GOHOSTOS} = "darwin"; then
-        sed -i "" "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
-    else
-        sed -i "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
-    fi
+  if test ${GOHOSTOS} = "darwin"; then
+    sed -i "" "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
+  else
+    sed -i "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
+  fi
 
-    docker build -t ${IMAGE_ADDR} ./
-    echo "Now you can upload image: "docker push ${IMAGE_ADDR}""
+  docker build -t ${IMAGE_ADDR} ./
+  echo "Now you can upload image: "docker push ${IMAGE_ADDR}""
 }
 
 function push() {
-    docker push ${IMAGE_ADDR}
+  docker push ${IMAGE_ADDR}
 }
 
 function run() {
-    docker run -i -t --rm \
-        -v $GOPATH/pkg:/go/pkg \
-        -v $(pwd):/usr/local/src \
-        -w /usr/local/src \
-        --network host \
-        registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${CLI_VERSION} \
-        make run
+  docker run -i -t --rm \
+      -v $GOPATH/pkg:/go/pkg \
+      -v $(pwd):/usr/local/src \
+      -w /usr/local/src \
+      --network host \
+      registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${CLI_VERSION} \
+      make run
 }
 
 $1
@@ -167,41 +166,41 @@ CMD [ "--config", "/opt/config/app.yaml" ]
 source scripts/env
 
 if test -z $1; then
-    echo "Usage:"
-    echo "\t ./scripts/version.sh prefix"
-    echo "\t ./scripts/version.sh release"
-    echo "\t ./scripts/version.sh update"
-    exit 0;
+  echo "Usage:"
+  echo "\t ./scripts/version.sh prefix"
+  echo "\t ./scripts/version.sh release"
+  echo "\t ./scripts/version.sh update"
+  exit 0;
 fi
 
 function prefix() {
-    TEMP=$(grep "version: \".*\"" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto)
-    PREFIX_VERSION=$(echo -n $TEMP | awk -F"\"" '{ print $2 }')
-    echo $PREFIX_VERSION
+  TEMP=$(grep "version: \".*\"" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto)
+  PREFIX_VERSION=$(echo -n $TEMP | awk -F"\"" '{ print $2 }')
+  echo $PREFIX_VERSION
 }
 
 function release() {
-    TEMP=$(cat VERSION)
-    RELEASE_VERSION=$TEMP
+  TEMP=$(cat VERSION)
+  RELEASE_VERSION=$TEMP
 
-    if test -z $RELEASE_VERSION; then
-        RELEASE_VERSION=$(git describe --tags --dirty --always 2>/dev/null)
-    fi
+  if test -z $RELEASE_VERSION; then
+    RELEASE_VERSION=$(git describe --tags --dirty --always 2>/dev/null)
+  fi
 
-    echo $RELEASE_VERSION
+  echo $RELEASE_VERSION
 }
 
 function update() {
-    GOHOSTS=$(go env GOHOSTOS)
+  GOHOSTS=$(go env GOHOSTOS)
 
-    PREFIX_VERSION=$(prefix)
-    RELEASE_VERSION=$(release)
+  PREFIX_VERSION=$(prefix)
+  RELEASE_VERSION=$(release)
 
-    if test ${GOHOSTS} = "darwin"; then
-        sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
-    else
-        sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
-    fi
+  if test ${GOHOSTS} = "darwin"; then
+    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
+  else
+    sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
+  fi
 }
 
 $1
@@ -215,8 +214,8 @@ $1
 #!/bin/bash
 
 if test -z $1; then
-    echo "Usage:"
-    echo "\t ./scripts/manifests.sh dev"
+  echo "Usage:"
+  echo "\t ./scripts/manifests.sh dev"
 fi
 
 GOHOSTOS=$(go env GOHOSTOS)
@@ -226,37 +225,37 @@ DEPLOY_ENV=$1
 IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
 
 function clean() {
-    rm -rf deploy/kubernetes/${DEPLOY_ENV}
+  rm -rf deploy/kubernetes/${DEPLOY_ENV}
 }
 
 function kubernetes() {
-    mkdir -p deploy/kubernetes/${DEPLOY_ENV}/
-    mkdir -p deploy/kubernetes/${DEPLOY_ENV}/config/configmap/
-    cp -rf scripts/templates/kubernetes/* deploy/kubernetes/${DEPLOY_ENV}/
+  mkdir -p deploy/kubernetes/${DEPLOY_ENV}/
+  mkdir -p deploy/kubernetes/${DEPLOY_ENV}/config/configmap/
+  cp -rf scripts/templates/kubernetes/* deploy/kubernetes/${DEPLOY_ENV}/
 
-    if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
-        cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml deploy/kubernetes/${DEPLOY_ENV}/config/configmap/app.yaml
-    fi
+  if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
+    cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml deploy/kubernetes/${DEPLOY_ENV}/config/configmap/app.yaml
+  fi
 
-    if test ${GOHOSTOS} = "darwin"; then
-        sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-        sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-        sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-        sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-        sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-        sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-        sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-        sed -i "" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    else
-        sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-        sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-        sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-        sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-        sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-        sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-        sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-        sed -i "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    fi
+  if test ${GOHOSTOS} = "darwin"; then
+    sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+    sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+    sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+    sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+    sed -i "" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  else
+    sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+    sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+    sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+    sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+    sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+    sed -i "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  fi
 }
 
 clean
