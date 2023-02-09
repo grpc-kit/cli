@@ -11,12 +11,12 @@ GIT_BRANCH	:= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 BUILD_DATE	:= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE	:= $(shell git --no-pager log -1 --format='%ct')
 RELEASE_VERSION ?= $(shell cat VERSION)
-BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/version.Appname=grpc-kit-cli' \
-	-X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
-	-X 'github.com/grpc-kit/pkg/version.GitBranch=${GIT_BRANCH}' \
-	-X 'github.com/grpc-kit/pkg/version.BuildDate=${BUILD_DATE}' \
-	-X 'github.com/grpc-kit/pkg/version.CommitUnixTime=${COMMIT_DATE}' \
-	-X 'github.com/grpc-kit/pkg/version.ReleaseVersion=${RELEASE_VERSION}'"
+BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/vars.Appname=grpc-kit-cli' \
+	-X 'github.com/grpc-kit/pkg/vars.GitCommit=${GIT_COMMIT}' \
+	-X 'github.com/grpc-kit/pkg/vars.GitBranch=${GIT_BRANCH}' \
+	-X 'github.com/grpc-kit/pkg/vars.BuildDate=${BUILD_DATE}' \
+	-X 'github.com/grpc-kit/pkg/vars.CommitUnixTime=${COMMIT_DATE}' \
+	-X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
 
 # 自定义变量
 BUILD_GOOS		?= $(shell ${GO} env GOOS)
