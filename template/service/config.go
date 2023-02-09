@@ -47,6 +47,9 @@ services:
 security:
   enable: true
   authentication:
+    insecure_rpcs:
+      - Check
+      - HealthCheck
     http_users:
       - username: user1
         password: grpc-kit-cli
@@ -105,7 +108,8 @@ security:
   authentication:
     # 跳过认证的rpc方法
     insecure_rpcs:
-      - SearchHosts
+      - Check
+      - HealthCheck
     oidc_provider:
       issuer: https://accounts.example.com
       config:
