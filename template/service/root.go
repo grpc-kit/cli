@@ -64,7 +64,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/grpc-kit/pkg v0.2.3
+	github.com/grpc-kit/pkg v0.2.4
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
@@ -1133,13 +1133,13 @@ BUILD_DATE      := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE     := $(shell git --no-pager log -1 --format='%ct' 2>/dev/null)
 PREFIX_VERSION  := $(shell ./scripts/version.sh prefix)
 RELEASE_VERSION ?= $(shell ./scripts/version.sh release)
-BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/version.Appname={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}' \
-                -X 'github.com/grpc-kit/pkg/version.CliVersion=${CLI_VERSION}' \
-                -X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
-                -X 'github.com/grpc-kit/pkg/version.GitBranch=${GIT_BRANCH}' \
-                -X 'github.com/grpc-kit/pkg/version.BuildDate=${BUILD_DATE}' \
-                -X 'github.com/grpc-kit/pkg/version.CommitUnixTime=${COMMIT_DATE}' \
-                -X 'github.com/grpc-kit/pkg/version.ReleaseVersion=${RELEASE_VERSION}'"
+BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/vars.Appname={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}' \
+                -X 'github.com/grpc-kit/pkg/vars.CliVersion=${CLI_VERSION}' \
+                -X 'github.com/grpc-kit/pkg/vars.GitCommit=${GIT_COMMIT}' \
+                -X 'github.com/grpc-kit/pkg/vars.GitBranch=${GIT_BRANCH}' \
+                -X 'github.com/grpc-kit/pkg/vars.BuildDate=${BUILD_DATE}' \
+                -X 'github.com/grpc-kit/pkg/vars.CommitUnixTime=${COMMIT_DATE}' \
+                -X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
 
 # 构建Docker容器变量
 BUILD_GOOS      ?= $(shell ${GO} env GOOS)
@@ -1232,5 +1232,22 @@ clean: ## Clean build.
 	t.files = append(t.files, &templateFile{
 		name: "VERSION",
 		body: `0.1.0`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "README.md",
+		parse: true,
+		body: `
+# {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
+
+## Description
+
+// TODO(user): Add simple overview of use/purpose
+
+## Getting Started
+
+// TODO(user): Add quick start
+
+`,
 	})
 }

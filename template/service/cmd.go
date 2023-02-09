@@ -30,7 +30,7 @@ import (
 
 	"github.com/grpc-kit/pkg/cfg"
 	"github.com/grpc-kit/pkg/signal"
-	"github.com/grpc-kit/pkg/version"
+	"github.com/grpc-kit/pkg/vars"
 	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
@@ -48,7 +48,7 @@ func init() {
 	flag.Parse()
 
 	if *flagVersion {
-		fmt.Println(version.Get())
+		fmt.Println(vars.GetVersion())
 		os.Exit(0)
 	}
 }

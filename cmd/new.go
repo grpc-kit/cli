@@ -19,7 +19,7 @@ import (
 	"regexp"
 
 	"github.com/grpc-kit/cli/template"
-	"github.com/grpc-kit/pkg/version"
+	"github.com/grpc-kit/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +56,7 @@ func runFuncNew(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("must set -s or --short-name")
 	}
 	if cfgType.Global.ReleaseVersion == "" {
-		cfgType.Global.ReleaseVersion = version.ReleaseVersion
+		cfgType.Global.ReleaseVersion = vars.ReleaseVersion
 		if cfgType.Global.ReleaseVersion == "" {
 			cfgType.Global.ReleaseVersion = "v0.0.0"
 		}
