@@ -32,6 +32,14 @@ build: clean ## Build application binary.
 	@mkdir build
 	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli main.go
 
+.PHONY: build-all
+build-all: clean ## Build all binaries that support the operating system.
+	@mkdir build
+	@GOOS=linux GOARCH=amd64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-linux-amd64 main.go
+	@GOOS=linux GOARCH=arm64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-linux-arm64 main.go
+	@GOOS=darwin GOARCH=amd64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-darwin-amd64 main.go
+	@GOOS=darwin GOARCH=arm64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-darwin-arm64 main.go
+
 .PHONY: docker-build
 docker-build: ## Build docker image with the application.
 	@echo ">> docker build"
