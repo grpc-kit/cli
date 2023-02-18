@@ -14,6 +14,8 @@
 
 package service
 
+import "fmt"
+
 func (t *templateService) fileDirectoryScripts() {
 	t.files = append(t.files, &templateFile{
 		name:  "scripts/env",
@@ -225,7 +227,19 @@ DEPLOY_ENV=$1
 IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
 
 function clean() {
+  rm -rf deploy/systemd/
+  rm -rf deploy/supervisor/
   rm -rf deploy/kubernetes/${DEPLOY_ENV}
+}
+
+function systemd() {
+  mkdir -p deploy/systemd/
+  cp -rf scripts/templates/systemd/* deploy/systemd/
+}
+
+function supervisor() {
+  mkdir -p deploy/supervisor/
+  cp -rf scripts/templates/supervisor/* deploy/supervisor/
 }
 
 function kubernetes() {
@@ -259,7 +273,51 @@ function kubernetes() {
 }
 
 clean
+systemd
+supervisor
 kubernetes
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  fmt.Sprintf("scripts/templates/systemd/%v-%v-%v.service", t.config.Global.ProductCode, t.config.Global.ShortName, t.config.Template.Service.APIVersion),
+		parse: true,
+		body: `
+[Unit]
+After=network-online.target
+Documentation=http://(app.yaml:services.http_address)/openapi-spec/
+Description=The {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }} microservice. For more API detailed, please refer to the docs
+
+[Service]
+Type=simple
+User=nobody
+Restart=always
+RestartSec=15s
+TimeoutSec=60s
+LimitNOFILE=65535
+KillMode=control-group
+MemoryLimit=2048M
+ExecStart=/usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/service --config /usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/config/app.yaml
+
+[Install]
+Alias={{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}.service
+WantedBy=multi-user.target
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  fmt.Sprintf("scripts/templates/supervisor/%v-%v-%v.conf", t.config.Global.ProductCode, t.config.Global.ShortName, t.config.Template.Service.APIVersion),
+		parse: true,
+		body: `
+[program:{{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}]
+command=/usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/service --config /usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/config/app.yaml
+directory=/usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/
+autostart=true
+autorestart=true
+startsecs=10
+startretries=3
+stdout_logfile=/var/log/supervisor/%(program_name)s.log
+stderr_logfile=/var/log/supervisor/%(program_name)s.log
 `,
 	})
 
