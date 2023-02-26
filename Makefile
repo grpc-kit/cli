@@ -2,6 +2,7 @@
 GO              := go
 GORUN           := ${GO} run
 GOPATH          := $(shell ${GO} env GOPATH)
+GOOS            ?= $(shell ${GO} env GOOS)
 GOARCH          ?= $(shell ${GO} env GOARCH)
 GOBUILD         := ${GO} build
 
@@ -28,9 +29,9 @@ help: ## Display this help.
 ##@ Build
 
 .PHONY: build
-build: clean ## Build application binary.
+build: clean ## Build binary files according to the target system arch.
 	@mkdir build
-	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli main.go
+	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-${GOOS}-${GOARCH} main.go
 
 .PHONY: build-all
 build-all: clean ## Build all binaries that support the operating system.
