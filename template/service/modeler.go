@@ -22,14 +22,30 @@ package modeler
 
 // IndependentCfg 个性配置
 type IndependentCfg struct {
-	Hello string ` + "`mapstructure:\"hello\"`" + `
+	Name string ` + "`mapstructure:\"name\"`" + `
 }
 
 // Init 用于初始化实例
 func (i *IndependentCfg) Init() error {
-    // 业务代码
+	// 业务代码
 
-    return nil
+	return nil
+}
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "modeler/independent_cfg_test.go",
+		body: `
+package modeler
+
+import "testing"
+
+func TestIndependentCfg(t *testing.T) {
+	i := &IndependentCfg{}
+	if err := i.Init(); err != nil {
+		t.Error(err)
+	}
 }
 `,
 	})
