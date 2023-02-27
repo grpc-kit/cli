@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/grpc-kit/pkg/version"
+	"github.com/grpc-kit/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +35,7 @@ func init() {
 }
 
 func runFuncVersion(cmd *cobra.Command, args []string) error {
-	rawBody, err := json.MarshalIndent(version.Get(), "", "  ")
+	rawBody, err := json.MarshalIndent(vars.GetVersion(), "", "  ")
 	if err != nil {
 		return err
 	}

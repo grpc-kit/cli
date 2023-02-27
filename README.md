@@ -1,4 +1,4 @@
-# gRPC Kit Cli
+# gRPC Kit
 
 主要基于以下几个核心类库实现：
 
@@ -6,122 +6,103 @@
 - [gogo](https://github.com/gogo/protobuf)
 - [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway)
 
-# Overview
+## 简要概述
 
 快速生成微服务模版，为同一产品提供统一的治理方式，提高多人协作效率
 
-#  Prepare
+## 生成代码并运行
 
-- go版本必须大于等于1.16.x
+### 创建应用模版
 
-版本检查
-
-```
-go version
-```
-
-centos 7 安装方式
-
-```
-yum install -y epel-release.noarch
-yum install -y golang.x86_64
+```shell
+docker run \
+    --rm \
+    -v $(pwd):/usr/local/src \
+    -w /usr/local/src \
+    registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:0.2.4-beta.1 \
+    grpc-kit-cli new -t service -p opsaid -s test1
 ```
 
-macOS 安装方式
+### 运行应用代码
 
-```
-brew install go
-```
-
-- 设置全局GOPATH且开启go mod支持
-
-```
-export GO111MODULE=on
-
-# 根据实际情况是否需要设置proxy
-export GOPROXY="https://goproxy.cn"
-
-# GOPATH仅做示例，根据实际情况更改
-export GOPATH=$HOME/go
-
-export PATH=$PATH:$HOME/bin:$GOPATH/bin
+```shell
+docker run -i -t --rm \
+    -v $GOPATH/pkg:/go/pkg \
+    -v $(pwd):/usr/local/src \
+    -w /usr/local/src \
+    --network host \
+    registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:0.2.4-beta.1 \
+    make run
 ```
 
-请确保以上变量在系统全局生效，可以写入 $HOME/.bash_profile 或 $HOME/.zshrc 等
+### 服务访问测试
 
-- 安装protoc与protoc-gen-*
+- 微服务接口文档
 
-protoc选择3.17.3版本，示例：
-
-```
-# 可直接从这里下载对应的二进制
-cd /usr/local/src
-curl -L -O 'https://github.com/protocolbuffers/protobuf/releases/download/v3.17.3/protoc-3.17.3-linux-x86_64.zip'
-unzip protoc-3.17.3-linux-x86_64.zip
-mv bin/protoc /usr/local/bin/
-mv include/google /usr/local/include/
-rmdir bin/ include/
+```shell
+http://127.0.0.1:8080/openapi-spec/
 ```
 
-protoc-gen-go、protoc-gen-go-grpc选择1.27.1与1.1.0版本
+- 微服务编译版本
 
-```
-go get google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
-go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0
-```
+```shell
+# curl http://127.0.0.1:8080/version | python -m json.tool
 
-protoc-gen-gogo选择为v1.3.2版本，示例：
-
-```
-go get github.com/gogo/protobuf/protoc-gen-gogo@v1.3.2
-```
-
-protoc-gen-swagger、protoc-gen-grpc-gateway选择1.16.0版本（不支持2.X），示例：
- 
-```
-go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.16.0
-go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.16.0
-```
-
-- 安装其他依赖的proto定义文件
-
-```
-mkdir -p $GOPATH/src/github.com/{grpc-kit,gogo,grpc,googleapis,grpc-ecosystem}
-git clone --depth 1 https://github.com/grpc-kit/api.git $GOPATH/src/github.com/grpc-kit/api
-git clone -b v1.1.0 --depth 1 https://github.com/gogo/googleapis.git $GOPATH/src/github.com/gogo/googleapis
-git clone -b v1.3.2 --depth 1 https://github.com/gogo/protobuf.git $GOPATH/src/github.com/gogo/protobuf
-git clone --depth 1 https://github.com/grpc/grpc-proto.git $GOPATH/src/github.com/grpc/grpc-proto
-git clone --depth 1 https://github.com/googleapis/googleapis.git $GOPATH/src/github.com/googleapis/googleapis
-git clone -b v1.16.0 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway
+{
+    "appname": "test1.v1.opsaid",
+    "build_date": "2023-01-13T09:10:45Z",
+    "git_commit": "1234567890123456789012345678901234567890",
+    "git_branch": "",
+    "go_version": "go1.18.5",
+    "compiler": "gc",
+    "platform": "darwin/amd64",
+    "cli_version": "0.2.3",
+    "commit_unix_time": 0,
+    "release_version": "0.1.0"
+}
 ```
 
-# Install
+- 微服务性能数据
 
-- 下载二进制安装
-
-```
-https://github.com/grpc-kit/cli/releases
+```shell
+# curl http://127.0.0.1:8080/metrics
 ```
 
-- 源码编译安装
+```shell
+# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds{quantile="0"} 0.000114581
+go_gc_duration_seconds{quantile="0.25"} 0.000873528
+go_gc_duration_seconds{quantile="0.5"} 0.002296699
+go_gc_duration_seconds{quantile="0.75"} 0.003722618
+go_gc_duration_seconds{quantile="1"} 0.010592338
+go_gc_duration_seconds_sum 0.033207328
+go_gc_duration_seconds_count 12
+# HELP go_goroutines Number of goroutines that currently exist.
+# TYPE go_goroutines gauge
+go_goroutines 19
 
+...
 ```
-git clone https://github.com/grpc-kit/cli.git
 
-make build
-cp ./build/grpc-kit-cli /usr/local/bin
+- 微服务健康探测
+
+探测流量仅到 gateway 不会调度到 grpc 服务。
+
+```shell
+# curl http://127.0.0.1:8080/ping
+OK
 ```
 
-# Getting Started
+探测流量同时到 gateway 与 grpc 服务。
 
+```shell
+# curl 'http://127.0.0.1:8080/healthz?service=test1.v1.opsaid'
+{"status":"SERVING"}
 ```
-grpc-kit-cli new -p example -s test1
 
-make run
-```
+- 示例 demo 接口
 
-访问测试
-
-```
-curl -u user1:pass1 http://127.0.0.1:10080/demo
+```shell
+# curl -u user1:grpc-kit-cli http://127.0.0.1:8080/api/demo
 ```

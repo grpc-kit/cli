@@ -142,13 +142,16 @@ import (
 	"context"
 	"net/http"
 
-	"{{ .Global.Repository }}/public/doc"
 	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
+	"{{ .Global.Repository }}/public/doc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // Register 用于服务启动前环境准备
 func (m *Microservice) Register(ctx context.Context) error {
 	pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}Server(m.server.Server(), m)
+	grpc_health_v1.RegisterHealthServer(m.server.Server(), health.NewServer())
 
 	// 注册服务信息
 	mux, err := m.baseCfg.Register(ctx, pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}HandlerFromEndpoint)
@@ -157,7 +160,7 @@ func (m *Microservice) Register(ctx context.Context) error {
 	}
 
 	// 注册API文档
-    mux.Handle("/openapi-spec/", http.FileServer(http.FS(doc.Assets)))
+	mux.Handle("/openapi-spec/", http.FileServer(http.FS(doc.Assets)))
 
 	// 这里添加其他自定义实现
 	m.privateHTTPHandle(mux)
@@ -186,8 +189,8 @@ package handler
 import (
 	"context"
 
-    "github.com/gogo/protobuf/types"
-    "github.com/grpc-kit/pkg/api"
+	"github.com/gogo/protobuf/types"
+	"github.com/grpc-kit/pkg/api"
 
 	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
 )
@@ -197,36 +200,36 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 	m.logger.Warnf("test demo warn: %v", "func Demo")
 
 	result := &pb.DemoResponse{
-	    // GET /api/demo
-	    Content:  []*api.ExampleResponse{
-	        {Name: "grpc-kit-cli"},
-            {Name: "grpc-kit-cfg"},
-            {Name: "grpc-kit-pkg"},
-            {Name: "grpc-kit-api"},
-            {Name: "grpc-kit-web"},
-            {Name: "grpc-kit-doc"},
-        },
-        Ping:  &api.ExampleResponse{},
-        // POST /api/demo
-        // GET /api/demo/{uuid}
-        Pong: &pb.DemoResponse_Pong{
-	        Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
-	        Pong: &api.ExampleResponse{},
-        },
-        // DELETE /api/demo/{uuid}
-        Empty: &types.Empty{},
-    }
+		// GET /api/demo
+		Content: []*api.ExampleResponse{
+			{Name: "grpc-kit-cli"},
+			{Name: "grpc-kit-cfg"},
+			{Name: "grpc-kit-pkg"},
+			{Name: "grpc-kit-api"},
+			{Name: "grpc-kit-web"},
+			{Name: "grpc-kit-doc"},
+		},
+		Ping: &api.ExampleResponse{},
+		// POST /api/demo
+		// GET /api/demo/{uuid}
+		Pong: &pb.DemoResponse_Pong{
+			Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
+			Pong: &api.ExampleResponse{},
+		},
+		// DELETE /api/demo/{uuid}
+		Empty: &types.Empty{},
+	}
 
-    if req.Ping != nil {
-        result.Ping.Name = req.Ping.Name
-        result.Pong.Pong.Name = req.Ping.Name
-    }
+	if req.Ping != nil {
+		result.Ping.Name = req.Ping.Name
+		result.Pong.Pong.Name = req.Ping.Name
+	}
 
-    if req.Uuid == "99feafb5-bed6-4daf-927a-69a2ab80c485" {
-        result.Pong.Pong.Name = "grpc-kit"
-    }
+	if req.Uuid == "99feafb5-bed6-4daf-927a-69a2ab80c485" {
+		result.Pong.Pong.Name = "grpc-kit"
+	}
 
-    return result, nil
+	return result, nil
 }
 `,
 	})
@@ -240,21 +243,21 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 package handler
 
 import (
-    "context"
+	"context"
 
-    "github.com/grpc-kit/pkg/errors"
-    hz "google.golang.org/grpc/health/grpc_health_v1"
+	"github.com/grpc-kit/pkg/errors"
+	hz "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // HealthCheck 用于健康检测
 func (m Microservice) HealthCheck(ctx context.Context, req *hz.HealthCheckRequest) (*hz.HealthCheckResponse, error) {
-    if req.Service == m.code {
-        return &hz.HealthCheckResponse{
-            Status: hz.HealthCheckResponse_SERVING,
-        }, nil
-    }
+	if req.Service == m.code {
+		return &hz.HealthCheckResponse{
+			Status: hz.HealthCheckResponse_SERVING,
+		}, nil
+	}
 
-    return nil, errors.NotFound(ctx).WithMessage("unknown service").Err()
+	return nil, errors.NotFound(ctx).WithMessage("unknown service").Err()
 }
 `,
 	})
@@ -291,6 +294,110 @@ func (m *Microservice) Shutdown(ctx context.Context) error {
 
 	m.logger.Warnf("Shutdown server end")
 	return nil
+}
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "handler/microservice_test.go",
+		parse: true,
+		body: `
+package handler
+
+import (
+	"testing"
+
+	"github.com/grpc-kit/pkg/cfg"
+
+	"{{ .Global.Repository }}/modeler"
+)
+
+var m *Microservice
+
+func init() {
+	lc := &cfg.LocalConfig{
+		Services: &cfg.ServicesConfig{
+			ServiceCode: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}",
+			HTTPAddress: "127.0.0.1:8080",
+			GRPCAddress: "127.0.0.1:10081",
+		},
+		Independent: modeler.IndependentCfg{},
+	}
+
+	s, err := NewMicroservice(lc)
+	if err != nil {
+		panic(err)
+	}
+
+	m = s
+}
+
+func TestMicroservice(t *testing.T) {
+	t.Run("Main", func(t *testing.T) {
+		t.Run("NotNil", testMicroserviceMainNotNil)
+	})
+}
+
+func testMicroserviceMainNotNil(t *testing.T) {
+	if m == nil {
+		t.Error("microservice is nil")
+	}
+}
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "handler/rpc_internal_test.go",
+		parse: true,
+		body: `
+package handler
+
+import (
+	"context"
+	"testing"
+
+	hz "google.golang.org/grpc/health/grpc_health_v1"
+)
+
+func TestInternal(t *testing.T) {
+	req := &hz.HealthCheckRequest{
+		Service: m.baseCfg.Services.ServiceCode,
+	}
+
+	_, err := m.HealthCheck(context.TODO(), req)
+	if err != nil {
+		t.Errorf("HealthCheck test fail: %v", err)
+	}
+}
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "handler/rpc_demo_test.go",
+		parse: true,
+		body: `
+package handler
+
+import (
+	"context"
+	"testing"
+
+	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
+)
+
+func TestDemo(t *testing.T) {
+	req := &pb.DemoRequest{
+		Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
+	}
+
+	resp, err := m.Demo(context.TODO(), req)
+	if err != nil {
+		t.Errorf("Demo test fail: %v", err)
+	}
+
+	if resp.Pong.Pong.Name != "grpc-kit" {
+		t.Errorf("the expected name is: %v, but: %v", "grpc-kit", resp.Pong.Pong.Name)
+	}
 }
 `,
 	})

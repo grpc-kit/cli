@@ -2,6 +2,7 @@
 GO              := go
 GORUN           := ${GO} run
 GOPATH          := $(shell ${GO} env GOPATH)
+GOOS            ?= $(shell ${GO} env GOOS)
 GOARCH          ?= $(shell ${GO} env GOARCH)
 GOBUILD         := ${GO} build
 
@@ -11,12 +12,12 @@ GIT_BRANCH	:= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 BUILD_DATE	:= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE	:= $(shell git --no-pager log -1 --format='%ct')
 RELEASE_VERSION ?= $(shell cat VERSION)
-BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/version.Appname=grpc-kit-cli' \
-	-X 'github.com/grpc-kit/pkg/version.GitCommit=${GIT_COMMIT}' \
-	-X 'github.com/grpc-kit/pkg/version.GitBranch=${GIT_BRANCH}' \
-	-X 'github.com/grpc-kit/pkg/version.BuildDate=${BUILD_DATE}' \
-	-X 'github.com/grpc-kit/pkg/version.CommitUnixTime=${COMMIT_DATE}' \
-	-X 'github.com/grpc-kit/pkg/version.ReleaseVersion=${RELEASE_VERSION}'"
+BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/vars.Appname=grpc-kit-cli' \
+	-X 'github.com/grpc-kit/pkg/vars.GitCommit=${GIT_COMMIT}' \
+	-X 'github.com/grpc-kit/pkg/vars.GitBranch=${GIT_BRANCH}' \
+	-X 'github.com/grpc-kit/pkg/vars.BuildDate=${BUILD_DATE}' \
+	-X 'github.com/grpc-kit/pkg/vars.CommitUnixTime=${COMMIT_DATE}' \
+	-X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
 
 # 自定义变量
 BUILD_GOOS		?= $(shell ${GO} env GOOS)
@@ -28,9 +29,22 @@ help: ## Display this help.
 ##@ Build
 
 .PHONY: build
-build: clean ## Build application binary.
+build: clean ## Build binary files according to the target system arch.
 	@mkdir build
-	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli main.go
+	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-${GOOS}-${GOARCH} main.go
+
+.PHONY: build-all
+build-all: clean ## Build all binaries that support the operating system.
+	@mkdir build
+	@GOOS=linux GOARCH=amd64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-linux-amd64 main.go
+	@GOOS=linux GOARCH=arm64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-linux-arm64 main.go
+	@GOOS=darwin GOARCH=amd64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-darwin-amd64 main.go
+	@GOOS=darwin GOARCH=arm64 ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/grpc-kit-cli-darwin-arm64 main.go
+
+.PHONY: docker-build
+docker-build: ## Build docker image with the application.
+	@echo ">> docker build"
+	@docker build ./ -t registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${RELEASE_VERSION}
 
 ##@ Clean
 
