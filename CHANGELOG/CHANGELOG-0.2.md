@@ -11,6 +11,55 @@
 
 ## [Unreleased]
 
+## [0.2.4] - 2023-02-27
+
+### Added
+
+grpc-kit/cli 模块
+
+- 重新格式化几个文件
+  ```shell
+  handler/rpc_demo.go
+  handler/rpc_internal.go
+  modeler/independent_cfg.go
+  ```
+- 添加 make docker-run 以容器化运行模式
+- 生成微服务模版新增 "README.md" 文件
+- 可一次性构建所支持的二进制文件
+- 自动生成 systemd 或 supervisor 的服务配置文件
+- 默认模版添加测试案例
+  1. handler/microservice_test.go
+  2. handler/rpc_demo_test.go
+  3. handler/rpc_internal_test.go
+  4. modeler/independent_cfg_test.go
+- 支持 gitlab-ci 的模版
+  1. 文件地址：.gitlab/workflows/grpc-kit.yml
+- 更换 app-sample.yaml 为 app-min.yaml
+- 添加 make test 以进行应用单元测试
+- scripts/env 添加 APPNAME SERVICE_CODE 全局变量
+  1. 在 version 中的 appname 格式统一更改为：
+  ```shell
+  # 应用名称
+  APPNAME={{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  
+  # 服务的代码，名称唯一且必填，格式：应用短名.接口版本.产品代码
+  SERVICE_CODE={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
+  ```
+
+grpc-kit/pkg 模块
+
+- 对模块 "version" 更改为 "vars" 专用于变量定义
+	1. 目录下新增 "VERSION" 表示当前软件包版本，为了兼容当前目录下创建 VERSION 文件记录版本号，而把原先 "version" 重新命名为 "vars"，对原先引用会存在破坏性，需更改引用路径，代码包含以下地址：Makefile、cmd/server/main.go
+- 支持 [gRPC Health Checking Protocol](https://github.com/grpc/grpc/blob/master/doc/health-checking.md) 健康检测
+  1. 可使用工具 [grpc-health-probe](https://github.com/grpc-ecosystem/grpc-health-probe) 进行健康检查。
+  2. 这个区别于内部自定义 HealthCheck 方法，它可用于检查从 gateway 至 grpc 整条链路的健康状态，而此仅能探测 grpc 服务。
+- 对 golang-jwt 由 v3.2 升级至 v4 版本
+- 对 OIDC 支持 HS256 签名算法
+  由于 OIDC 目前大部分仅支持 RS256 签名算法，如 [微软OIDC服务](https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration) 中的 "id_token_signing_alg_values_supported" 属性，但是内部系统一些场景需要额外支持 HS256 算法。
+  这里如果 token 是 HS256 算法，则获取 token 中的 sub 属性，跟配置中的 security.authentication.http_users 用户密码作为密钥解密。
+- scripts 目录下 shell 脚本锁进
+  原先存在使用 tab 或四空格、二空格锁进，现统一调整为二个空格。
+
 ## [0.2.3] - 2022-11-28
 
 ### Added
