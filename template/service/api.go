@@ -30,6 +30,8 @@ syntax = "proto3";
 
 package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }};
 
+option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
+
 // 引入依赖的外部proto文件
 import "github.com/grpc-kit/api/known/status/v1/response.proto";
 import "github.com/googleapis/googleapis/google/api/annotations.proto";
@@ -42,7 +44,7 @@ import "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortN
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   swagger: "2.0",
   info: {
-    title: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}",
+    title: "{{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}",
     contact: {
       name: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}",
       url: "http://{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}.{{ .Global.APIEndpoint }}"
@@ -184,6 +186,8 @@ syntax = "proto3";
 // 根据具体的微服务名称做更改
 package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }};
 
+option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
+
 // 引入google公共类型
 import "google/protobuf/empty.proto";
 
@@ -193,8 +197,8 @@ import "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-openapiv2/options/anno
 
 // DemoRequest Demo方法请求可使用的接口参数
 message DemoRequest {
-  option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
-    example: { value: '{ "ping": { "name": "grpc-kit" } }' }
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    example: '{ "ping": { "name": "grpc-kit" } }'
   };
 
   // UUID 资源编号
@@ -206,8 +210,8 @@ message DemoRequest {
 
 // DemoResponse Demo方法响应的具体内容
 message DemoResponse {
-  option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
-    example: { value: '{"uuid":"99feafb5-bed6-4daf-927a-69a2ab80c485", "pong": { "name": "grpc-kit" } }' }
+  option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_schema) = {
+    example: '{"uuid":"99feafb5-bed6-4daf-927a-69a2ab80c485", "pong": { "name": "grpc-kit" } }'
   };
 
   message Pong {

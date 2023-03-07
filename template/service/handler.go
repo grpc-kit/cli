@@ -256,7 +256,7 @@ func (m Microservice) HealthCheck(ctx context.Context, req *statusv1.HealthCheck
 		}, nil
 	}
 
-	return nil, errors.NotFound(ctx).WithMessage("unknown service").Err()
+	return nil, errs.NotFound(ctx).WithMessage("unknown service").Err()
 }
 `,
 	})
