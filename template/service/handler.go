@@ -189,8 +189,7 @@ package handler
 import (
 	"context"
 
-	"github.com/gogo/protobuf/types"
-	"github.com/grpc-kit/pkg/api"
+	examplev1 "github.com/grpc-kit/pkg/api/known/example/v1"
 
 	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
 )
@@ -201,7 +200,7 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 
 	result := &pb.DemoResponse{
 		// GET /api/demo
-		Content: []*api.ExampleResponse{
+		Content: []*examplev1.ExampleResponse{
 			{Name: "grpc-kit-cli"},
 			{Name: "grpc-kit-cfg"},
 			{Name: "grpc-kit-pkg"},
@@ -209,15 +208,15 @@ func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoRe
 			{Name: "grpc-kit-web"},
 			{Name: "grpc-kit-doc"},
 		},
-		Ping: &api.ExampleResponse{},
+		Ping: &examplev1.ExampleResponse{},
 		// POST /api/demo
 		// GET /api/demo/{uuid}
 		Pong: &pb.DemoResponse_Pong{
 			Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
-			Pong: &api.ExampleResponse{},
+			Pong: &examplev1.ExampleResponse{},
 		},
 		// DELETE /api/demo/{uuid}
-		Empty: &types.Empty{},
+		// Empty: &types.Empty{},
 	}
 
 	if req.Ping != nil {
@@ -245,15 +244,15 @@ package handler
 import (
 	"context"
 
-	"github.com/grpc-kit/pkg/errors"
-	hz "google.golang.org/grpc/health/grpc_health_v1"
+	"github.com/grpc-kit/pkg/errs"
+	statusv1 "github.com/grpc-kit/pkg/api/known/status/v1"
 )
 
 // HealthCheck 用于健康检测
-func (m Microservice) HealthCheck(ctx context.Context, req *hz.HealthCheckRequest) (*hz.HealthCheckResponse, error) {
+func (m Microservice) HealthCheck(ctx context.Context, req *statusv1.HealthCheckRequest) (*statusv1.HealthCheckResponse, error) {
 	if req.Service == m.code {
-		return &hz.HealthCheckResponse{
-			Status: hz.HealthCheckResponse_SERVING,
+		return &statusv1.HealthCheckResponse{
+			Status: statusv1.HealthCheckResponse_SERVING,
 		}, nil
 	}
 
@@ -356,11 +355,11 @@ import (
 	"context"
 	"testing"
 
-	hz "google.golang.org/grpc/health/grpc_health_v1"
+	statusv1 "github.com/grpc-kit/pkg/api/known/status/v1"
 )
 
 func TestInternal(t *testing.T) {
-	req := &hz.HealthCheckRequest{
+	req := &statusv1.HealthCheckRequest{
 		Service: m.baseCfg.Services.ServiceCode,
 	}
 
