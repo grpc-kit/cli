@@ -28,6 +28,11 @@ default:
 variables:
   CGO_ENABLED: "0"
   GIT_SSL_NO_VERIFY: "true"
+  #GO111MODULE: "on"
+  #GOPROXY: "https://goproxy.cn"
+  #GOSUMDB: "sum.golang.google.cn"
+  #GOPATH: "/home/gitlab-runner/go"
+  #GOPRIVATE: ""
 
 # 流水线各阶段
 stages:
