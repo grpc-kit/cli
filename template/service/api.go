@@ -89,7 +89,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   responses: {
     key: "4xx",
     value: {
-      description: "客户端错误响应体"
+      description: "客户端参数异常"
       schema: {
         json_schema: {ref: ".grpc_kit.api.known.status.v1.ErrorResponse"}
       }
@@ -98,7 +98,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   responses: {
     key: "5xx",
     value: {
-      description: "服务端错误响应体"
+      description: "服务端处理异常"
       schema: {
         json_schema: {ref: ".grpc_kit.api.known.status.v1.ErrorResponse"}
       }
