@@ -48,7 +48,7 @@ config/app-prod-*
 .idea/
 build/
 backup/
-public/doc/openapi-spec/api/*
+public/doc/openapi-spec/microservice.swagger.json
 `,
 	})
 
@@ -58,7 +58,7 @@ public/doc/openapi-spec/api/*
 		body: `
 module {{ .Global.Repository }}
 
-go 1.16
+go 1.18
 
 require (
 	github.com/gogo/protobuf v1.3.2
@@ -220,6 +220,28 @@ docker-push: ## Push docker image with the application.
 		NAMESPACE=${NAMESPACE} \
 		SHORTNAME=${SHORTNAME} \
 		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
+
+##@ Build Dependencies
+
+.PHONY: protoc-gen-go
+protoc-gen-go: ## Download protoc-gen-go locally if necessary.
+	@echo ">> download binary protoc-gen-go"
+	@./scripts/binaries.sh protoc-gen-go
+
+.PHONY: protoc-gen-go-grpc
+protoc-gen-go-grpc: ## Download protoc-gen-go-grpc locally if necessary.
+	@echo ">> download binary protoc-gen-go-grpc"
+	@./scripts/binaries.sh protoc-gen-go-grpc
+
+.PHONY: protoc-gen-grpc-gateway
+protoc-gen-grpc-gateway: ## Download protoc-gen-grpc-gateway locally if necessary.
+	@echo ">> download binary protoc-gen-grpc-gateway"
+	@./scripts/binaries.sh protoc-gen-grpc-gateway
+
+.PHONY: protoc-gen-openapiv2
+protoc-gen-openapiv2: ## Download protoc-gen-openapiv2 locally if necessary.
+	@echo ">> download binary protoc-gen-openapiv2"
+	@./scripts/binaries.sh protoc-gen-openapiv2
 
 ##@ Clean
 

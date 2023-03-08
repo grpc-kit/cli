@@ -507,4 +507,44 @@ spec:
         emptyDir: {}
 `,
 	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/binaries.sh",
+		body: `
+#!/bin/bash
+
+source scripts/env
+
+if test -z $1; then
+  echo "Usage:"
+  echo "\t ./scripts/binaries.sh protoc-gen-go"
+  exit 0;
+fi
+
+function protoc-gen-go-grpc() {
+  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+}
+
+function protoc-gen-go() {
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+}
+
+function protoc-gen-grpc-gateway() {
+  go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.15.2
+}
+
+function protoc-gen-openapiv2() {
+  go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.15.2
+}
+
+FILE=$(which $1)
+if test -f "$FILE"; then
+  echo "the binary already exists at: "$FILE""
+else
+  $1
+  echo "download complete, this will place binaries in your \$GOBIN, make sure that your \$GOBIN is in your \$PATH."
+fi
+`,
+	})
+
 }
