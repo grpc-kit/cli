@@ -177,7 +177,8 @@ generate: precheck ## Generate code from proto files.
 	@./scripts/genproto.sh
 
 .PHONY: lint
-lint: ## Run go fmt and vet against code.
+lint: generate ## Run go fmt and vet against code.
+	@${GO} mod tidy
 	@${GO} fmt ./...
 	@${GO} vet ./...
 
