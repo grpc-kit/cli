@@ -244,8 +244,8 @@ package handler
 import (
 	"context"
 
-	"github.com/grpc-kit/pkg/errs"
 	statusv1 "github.com/grpc-kit/pkg/api/known/status/v1"
+	"github.com/grpc-kit/pkg/errs"
 )
 
 // HealthCheck 用于健康检测
