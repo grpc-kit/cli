@@ -150,7 +150,7 @@ FROM {{IMAGE_FROM}}
 WORKDIR /opt
 
 COPY build/service /opt/service
-COPY config/app-sample.yaml /opt/config/app.yaml
+COPY config/app-mini.yaml /opt/config/app.yaml
 
 EXPOSE 10080/tcp
 EXPOSE 10081/tcp
