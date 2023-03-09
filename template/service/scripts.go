@@ -116,9 +116,12 @@ protoc \
     -I "${GOPATH}"/src \
     -I "${GOPATH}"/src/github.com/googleapis/googleapis/ \
     -I "${GOPATH}"/src/github.com/grpc-ecosystem/grpc-gateway/ \
+    --grpc-gateway_opt grpc_api_configuration=api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.gateway.yaml \
     --grpc-gateway_out "${GOPATH}"/src/ \
-    --openapiv2_opt allow_repeated_fields_in_body=true \
     --openapiv2_opt disable_default_errors=true \
+    --openapiv2_opt disable_service_tags=true \
+    --openapiv2_opt grpc_api_configuration=api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.gateway.yaml \
+    --openapiv2_opt openapi_configuration=api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml \
     --openapiv2_out "${GOPATH}"/src/ \
     "${GOPATH}"/src/{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
 
@@ -177,7 +180,7 @@ if test -z $1; then
 fi
 
 function prefix() {
-  TEMP=$(grep "version: \".*\"" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto)
+  TEMP=$(grep "version: \".*\"" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml)
   PREFIX_VERSION=$(echo -n $TEMP | awk -F"\"" '{ print $2 }')
   echo $PREFIX_VERSION
 }
@@ -200,9 +203,9 @@ function update() {
   RELEASE_VERSION=$(release)
 
   if test ${GOHOSTS} = "darwin"; then
-    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
+    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml
   else
-    sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
+    sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml
   fi
 }
 
