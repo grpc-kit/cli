@@ -32,10 +32,10 @@ package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.A
 
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
-// 引入依赖的外部proto文件
+// 引入依赖的外部 proto 文件
 import "github.com/grpc-kit/api/known/status/v1/response.proto";
 
-// 同组RPC方法对应一个proto文件，以该组RPC名称的小写字母为文件名
+// 同组 RPC 方法对应一个 proto 文件，以该组 RPC 名称的小写字母为文件名
 import "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
 
 // 该微服务支持的 RPC 方法定义
