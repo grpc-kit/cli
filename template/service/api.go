@@ -28,116 +28,20 @@ func (t *templateService) fileDirectoryApi() {
 		body: `
 syntax = "proto3";
 
-package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }};
+package {{ .Global.ProtoPackage }};
 
-// 引入依赖的外部proto文件
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/grpc/grpc-proto/grpc/health/v1/health.proto";
-import "github.com/googleapis/googleapis/google/api/annotations.proto";
-import "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options/annotations.proto";
+option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
-// 同组RPC方法对应一个proto文件，以该组RPC名称的小写字母为文件名
-import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
+// 引入依赖的外部 proto 文件
+import "github.com/grpc-kit/api/known/status/v1/response.proto";
 
-// 结合本项目，推荐做以下设置
-option (gogoproto.marshaler_all) = true;
-option (gogoproto.sizer_all) = true;
-option (gogoproto.unmarshaler_all) = true;
-option (gogoproto.goproto_registration) = true;
-option (gogoproto.goproto_getters_all) = true;
-option (gogoproto.goproto_unrecognized_all) = false;
-option (gogoproto.goproto_unkeyed_all) = false;
-option (gogoproto.goproto_sizecache_all) = false;
-option (gogoproto.equal_all) = true;
-option (gogoproto.compare_all) = true;
-option (gogoproto.messagename_all) = false;
+// 同组 RPC 方法对应一个 proto 文件，以该组 RPC 名称的小写字母为文件名
+import "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
 
-// 转换为swagger接口文档的相关设置
-option (grpc.gateway.protoc_gen_swagger.options.openapiv2_swagger) = {
-    host: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}.{{ .Global.APIEndpoint }}",
-    info: {
-        title: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}",
-        contact: {
-            name: "gRPC Kit",
-            url: "https://grpc-kit.com"
-        },
-        license:{
-            name: "Apache License 2.0"
-        }
-        version: "0.0.0",
-    },
-    security_definitions: {
-        security: {
-            key: "BasicAuth",
-            value: {
-                type: TYPE_BASIC
-            }
-        }
-    },
-    security: {
-        security_requirement: {
-            key: "BasicAuth",
-            value: {}
-        }
-    },
-    responses: {
-        key: "500",
-        value: {
-            description: '{"code": 500, "error": "internal error", "message": "internal error", "details": []}'
-        }
-    }
-};
-
-// 该微服务支持的RPC方法定义
-service {{ title .Global.ProductCode }}{{ title .Global.ShortName }} {
-    rpc HealthCheck(grpc.health.v1.HealthCheckRequest) returns (grpc.health.v1.HealthCheckResponse) {
-        option (google.api.http) = {
-            get: "/healthz"
-        };
-        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-            tags: "internal"
-            summary: "健康检测"
-            description: '请务删除！\n 接口格式：/healthz?service={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
-        };
-    };
-
-    rpc Demo(DemoRequest) returns (DemoResponse) {
-        option (google.api.http) = {
-            post: "/api/demo"
-            body: "*"
-            response_body: "pong"
-            additional_bindings {
-                get: "/api/demo"
-                response_body: "content"
-            }
-            additional_bindings {
-                get: "/api/demo/{uuid}"
-                response_body: "pong.pong"
-            }
-            additional_bindings {
-                put: "/api/demo/{uuid}"
-                body: "ping"
-                response_body: "ping"
-            }
-            additional_bindings {
-                delete: "/api/demo/{uuid}"
-                response_body: "empty"
-            }
-        };
-        option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
-            tags: "demo",
-            summary: "示例RESTful/RPC接口",
-            description: "这里做一些较长的使用描述\n 1. POST 用于创建资源，非幂等\n 2. GET 用于获取资源，幂等\n 3. PUT 用于更新资源，幂等\n 4. DELETE 用于删除资源，幂等",
-            deprecated: false,
-            responses: {
-                key: "204",
-                value: {
-                    description: "no content"
-                }
-            }
-        };
-    }
-
+// 该微服务支持的 RPC 方法定义
+service {{ title .Global.ServiceTitle }} {
+  rpc HealthCheck(grpc_kit.api.known.status.v1.HealthCheckRequest) returns (grpc_kit.api.known.status.v1.HealthCheckResponse) {}
+  rpc Demo(DemoRequest) returns (DemoResponse) {}
 }
 `,
 	})
@@ -152,74 +56,191 @@ service {{ title .Global.ProductCode }}{{ title .Global.ShortName }} {
 syntax = "proto3";
 
 // 根据具体的微服务名称做更改
-package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }};
+package {{ .Global.ProtoPackage }};
+
+option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
 // 引入google公共类型
 import "google/protobuf/empty.proto";
 
 // 引入第三方依赖的proto文件
-import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options/annotations.proto";
+import "github.com/grpc-kit/api/known/example/v1/example.proto";
 
-// 引入项目通用的proto文件
-import "github.com/grpc-kit/api/proto/v1/example.proto";
-
-// 结合本项目，推荐做以下设置
-option (gogoproto.marshaler_all) = true;
-option (gogoproto.sizer_all) = true;
-option (gogoproto.unmarshaler_all) = true;
-option (gogoproto.goproto_registration) = true;
-option (gogoproto.goproto_getters_all) = true;
-option (gogoproto.goproto_unrecognized_all) = false;
-option (gogoproto.goproto_unkeyed_all) = false;
-option (gogoproto.goproto_sizecache_all) = false;
-option (gogoproto.equal_all) = true;
-option (gogoproto.compare_all) = true;
-option (gogoproto.messagename_all) = false;
-
+// DemoRequest Demo方法请求可使用的接口参数
 message DemoRequest {
-    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
-        json_schema: {
-            description: "Demo方法请求可使用的接口参数",
-        },
-        example: { value: '{ "ping": { "name": "grpc-kit" } }' }
-    };
+  // UUID 资源编号
+  string uuid = 1;
 
+  // Ping 资源内容
+  grpc_kit.api.known.example.v1.ExampleRequest ping = 2;
+}
+
+// DemoResponse Demo方法响应的具体内容
+message DemoResponse {
+
+  message Pong {
     // UUID 资源编号
     string uuid = 1;
 
-    // Ping 资源内容
-    grpc.kit.api.proto.v1.ExampleRequest ping = 2;
+    // Pong 单个资源响应内容
+    grpc_kit.api.known.example.v1.ExampleResponse pong = 2;
+  }
+
+  // Pong 返回创建的资源
+  Pong pong = 1;
+
+  // Content 多个资源响应内容（无分页属性）
+  repeated grpc_kit.api.known.example.v1.ExampleResponse content = 2;
+
+  // Ping 返回更新的资源
+  grpc_kit.api.known.example.v1.ExampleResponse ping = 3;
+
+  // Empty 返回空的内容
+  google.protobuf.Empty empty = 4;
 }
+`,
+	})
 
-message DemoResponse {
-    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
-        json_schema: {
-            description: "Demo方法响应的具体内容",
-        },
-        example: { value: '{"uuid":"99feafb5-bed6-4daf-927a-69a2ab80c485", "pong": { "name": "grpc-kit" } }' }
-    };
+	t.files = append(t.files, &templateFile{
+		name: fmt.Sprintf("api/%v/%v/%v/microservice.gateway.yaml",
+			t.config.Global.ProductCode,
+			t.config.Global.ShortName,
+			t.config.Template.Service.APIVersion),
+		parse: true,
+		body: `
+type: google.api.Service
+config_version: 3
 
-    message Pong {
-        // UUID 资源编号
-        string uuid = 1;
+http:
+  rules:
+  - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
+    get: "/healthz"
 
-        // Pong 单个资源响应内容
-        grpc.kit.api.proto.v1.ExampleResponse pong = 2;
-    }
+  - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
+    post: "/api/demo"
+    body: "*"
+    response_body: "pong"
+    additional_bindings:
+      - get: "/api/demo"
+      - get: "/api/demo/{uuid}"
+        response_body: "pong.pong"
+      - put: "/api/demo/{uuid}"
+        body: "ping"
+        response_body: "ping"
+      - delete: "/api/demo/{uuid}"
+        response_body: "empty"
+`,
+	})
 
-    // Pong 返回创建的资源
-    Pong pong = 1;
+	t.files = append(t.files, &templateFile{
+		name: fmt.Sprintf("api/%v/%v/%v/microservice.openapiv2.yaml",
+			t.config.Global.ProductCode,
+			t.config.Global.ShortName,
+			t.config.Template.Service.APIVersion),
+		parse: true,
+		body: `
+openapiOptions:
+  # grpc.gateway.protoc_gen_openapiv2.options.Swagger
+  # 对应 swagger 属性，一般不做更改
+  file:
+    - file: "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.proto"
+      option:
+        swagger: "2.0"
+        info:
+          title: "{{ .Global.Appname }}"
+          contact:
+            name: "{{ .Global.ServiceCode }}"
+            url: "http://{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}.{{ .Global.APIEndpoint }}"
+          license:
+            name: "Apache License 2.0"
+            url: "https://github.com/grpc-kit/cli/blob/main/LICENSE"
+          version: "0.0.0"
+        host: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}.{{ .Global.APIEndpoint }}"
+        base_path: "/"
+        schemes:
+          - "HTTP"
+        consumes:
+          - "application/json"
+        produces:
+          - "application/json"
+        securityDefinitions:
+          security:
+            BasicAuth:
+              type: "TYPE_BASIC"
+            ApiKeyAuth:
+              type: "TYPE_API_KEY"
+              in: "IN_HEADER"
+              name: "Authorization: Bearer <token>"
+        security:
+          - securityRequirement:
+              BasicAuth: {}
+          - securityRequirement:
+              ApiKeyAuth: {}
+        responses:
+          "4xx":
+            description: "客户端参数异常"
+            schema:
+              jsonSchema:
+                ref: ".grpc_kit.api.known.status.v1.ErrorResponse"
+          "5xx":
+            description: "服务端处理异常"
+            schema:
+              jsonSchema:
+                ref: ".grpc_kit.api.known.status.v1.ErrorResponse"
+        external_docs:
+          description: 'Code generated by "grpc-kit-cli/{{ .Global.ReleaseVersion }}"'
+          url: "https://grpc-kit.com"
 
-    // Content 多个资源响应内容（无分页属性）
-    repeated grpc.kit.api.proto.v1.ExampleResponse content = 2;
+  # grpc.gateway.protoc_gen_openapiv2.options.Operation
+  # 对应 proto 中 service 的 rpc
+  method:
+    - method: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
+      option:
+        tags:
+          - "internal"
+        description: '请务删除！\n 接口格式：/healthz?service=test1.v1.opsaid\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
+        summary: "健康检测"
+        responses:
+          "200":
+            examples:
+              "application/json": '{"value": "the input value"}'
 
-    // Ping 返回更新的资源
-    grpc.kit.api.proto.v1.ExampleResponse ping = 3;
+    - method: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
+      option:
+        tags:
+          - "demo"
+        description: "这里做一些较长的使用描述\n 1. POST 用于创建资源，非幂等\n 2. GET 用于获取资源，幂等\n 3. PUT 用于更新资源，幂等\n 4. DELETE 用于删除资源，幂等"
+        summary: "示例 RESTful/RPC 接口"
+        responses:
+          "204":
+            examples:
+              "application/json": '{}'
 
-    // Empty 返回空的内容
-    google.protobuf.Empty empty = 4;
-}
+  # grpc.gateway.protoc_gen_openapiv2.options.Schema
+  # 对应 proto 的 message
+  message:
+    - message: {{ .Global.ProtoPackage }}.DemoRequest
+      option:
+        # 请求示例
+        example: '{ "ping": { "name": "grpc-kit" } }'
+        jsonSchema:
+          # 必填字段
+          required:
+            - "ping"
+          # 对结构体更详细的描述
+          description: "结构体其他更详细的描述"
+    - message: {{ .Global.ProtoPackage }}.DemoResponse
+      option:
+        example: '{"uuid":"99feafb5-bed6-4daf-927a-69a2ab80c485", "pong": { "name": "grpc-kit" } }'
+
+  # grpc.gateway.protoc_gen_openapiv2.options.JSONSchema
+  # 对应 proto 的 message 下各属性
+  field:
+    - field: {{ .Global.ProtoPackage }}.DemoRequest.uuid
+      option:
+        # 字段均不做 description 注解，在定义 proto 属性时添加
+        # description: "请求的 ping 属性"
+        default: "99feafb5-bed6-4daf-927a-69a2ab80c485"
 `,
 	})
 }

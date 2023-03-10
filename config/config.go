@@ -36,6 +36,16 @@ type GlobalConfig struct {
 	ReleaseVersion string `mapstructure:"release_version"`
 	// 代码仓库地址
 	Repository string `mapstructure:"repository"`
+	// 组织代码
+	Organization string `mapstructure:"organization"`
+	// 应用名称
+	Appname string `mapstructure:"-"`
+	// 服务代码
+	ServiceCode string `mapstructure:"-"`
+	// 服务包名
+	ProtoPackage string `mapstructure:"-"`
+	// 服务标题
+	ServiceTitle string `mapstructure:"-"`
 }
 
 // TemplateConfig 用于表示各代码类型的模版配置结构
@@ -45,6 +55,8 @@ type TemplateConfig struct {
 
 // TemplateService 用于表示微服务类型模版的配置结构
 type TemplateService struct {
-	// 服务的接口版本
+	// 服务接口
 	APIVersion string `mapstructure:"api-version"`
+	// 组织代码
+	Organization string
 }

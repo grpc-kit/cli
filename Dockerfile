@@ -44,11 +44,16 @@ RUN cd /usr/local/src \
     && rmdir include/
 
 # 下载 protoc-gen 二进制
-RUN go get google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 \
-    && go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0 \
-    && go get github.com/gogo/protobuf/protoc-gen-gogo@v1.3.2 \
-    && go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.16.0 \
-    && go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.16.0
+#RUN go get google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1 \
+#    && go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0 \
+#    && go get github.com/gogo/protobuf/protoc-gen-gogo@v1.3.2 \
+#    && go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@v1.16.0 \
+#    && go get github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.16.0
+
+RUN go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
+	&& go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
+	&& go install google.golang.org/protobuf/cmd/protoc-gen-go \
+	&& go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
 # 安装其他依赖的 proto 定义文件
 RUN git clone --depth 1 https://github.com/grpc-kit/api.git $GOPATH/src/github.com/grpc-kit/api \

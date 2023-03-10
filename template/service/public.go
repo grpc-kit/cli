@@ -28,7 +28,7 @@ func (t *templateService) fileDirectoryPublic() {
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>gRPC-Kit</title>
+    <title>{{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}</title>
     <style>
       body {
         margin: 0;
@@ -38,7 +38,7 @@ func (t *templateService) fileDirectoryPublic() {
   </head>
 
   <body>
-    <redoc spec-url='/openapi-spec/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.swagger.json'></redoc>
+    <redoc spec-url='/openapi-spec/microservice.swagger.json'></redoc>
     <script src="./redoc.standalone.js"> </script>
   </body>
 </html>

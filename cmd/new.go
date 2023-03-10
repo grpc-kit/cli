@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/grpc-kit/cli/template"
 	"github.com/grpc-kit/pkg/vars"
@@ -30,7 +31,7 @@ var newCmd = &cobra.Command{
 	Long: `Create a new code templates for your product. It will only be used when 
 it is newly created. For example:
 
-./grpc-kit-cli new -t service -p opsaid -s test1
+./grpc-kit-cli new -t service -o default -p opsaid -s test1
 `,
 	RunE:          runFuncNew,
 	SilenceUsage:  true,
@@ -43,6 +44,8 @@ func init() {
 	// 只在该command下生效的参数
 	newCmd.Flags().StringVar(&cfgType.Template.Service.APIVersion,
 		"api-version", "v1", "api version, like: v1alpha1, v1beta1, v1")
+	newCmd.Flags().StringVarP(&cfgType.Template.Service.Organization,
+		"organization", "o", "grpc-kit", "the company or department where the product is located")
 }
 
 func runFuncNew(cmd *cobra.Command, args []string) error {
@@ -67,9 +70,37 @@ func runFuncNew(cmd *cobra.Command, args []string) error {
 	if !re.MatchString(cfgType.Global.ShortName) {
 		return fmt.Errorf("short-name: %v, not match regex", cfgType.Global.ShortName)
 	}
+
+	// 针对配置植入默认值
 	if cfgType.Global.Repository == "" || cfgType.Global.Repository == "git-domain/product-code/short-name" {
 		cfgType.Global.Repository = fmt.Sprintf("%v/%v/%v",
 			cfgType.Global.GitDomain, cfgType.Global.ProductCode, cfgType.Global.ShortName)
+	}
+
+	// 组织代号选择优先级：用户创建时指定 > 默认全局
+	if cfgType.Global.Organization == "" {
+		cfgType.Global.Organization = "grpc-kit"
+	}
+	if cfgType.Template.Service.Organization != "grpc-kit" {
+		cfgType.Global.Organization = cfgType.Template.Service.Organization
+	}
+
+	if cfgType.Global.Appname == "" {
+		cfgType.Global.Appname = fmt.Sprintf("%v-%v-%v",
+			cfgType.Global.ProductCode, cfgType.Global.ShortName, cfgType.Template.Service.APIVersion)
+	}
+	if cfgType.Global.ProtoPackage == "" {
+		orgName := strings.Replace(cfgType.Global.Organization, "-", "_", -1)
+		cfgType.Global.ProtoPackage = fmt.Sprintf("%v.api.%v.%v.%v",
+			orgName, cfgType.Global.ProductCode, cfgType.Global.ShortName, cfgType.Template.Service.APIVersion)
+	}
+	if cfgType.Global.ServiceTitle == "" {
+		cfgType.Global.ServiceTitle = fmt.Sprintf("%v%v",
+			strings.Title(cfgType.Global.ProductCode), strings.Title(cfgType.Global.ShortName))
+	}
+	if cfgType.Global.ServiceCode == "" {
+		cfgType.Global.ServiceCode = fmt.Sprintf("%v.%v.%v",
+			cfgType.Global.ShortName, cfgType.Template.Service.APIVersion, cfgType.Global.ProductCode)
 	}
 
 	fmt.Println(
