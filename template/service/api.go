@@ -28,7 +28,7 @@ func (t *templateService) fileDirectoryApi() {
 		body: `
 syntax = "proto3";
 
-package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }};
+package {{ .Global.ProtoPackage }};
 
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
@@ -39,7 +39,7 @@ import "github.com/grpc-kit/api/known/status/v1/response.proto";
 import "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
 
 // 该微服务支持的 RPC 方法定义
-service {{ title .Global.ProductCode }}{{ title .Global.ShortName }} {
+service {{ title .Global.ServiceTitle }} {
   rpc HealthCheck(grpc_kit.api.known.status.v1.HealthCheckRequest) returns (grpc_kit.api.known.status.v1.HealthCheckResponse) {}
   rpc Demo(DemoRequest) returns (DemoResponse) {}
 }
@@ -56,7 +56,7 @@ service {{ title .Global.ProductCode }}{{ title .Global.ShortName }} {
 syntax = "proto3";
 
 // 根据具体的微服务名称做更改
-package {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }};
+package {{ .Global.ProtoPackage }};
 
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
@@ -113,10 +113,10 @@ config_version: 3
 
 http:
   rules:
-  - selector: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ title .Global.ProductCode }}{{ title .Global.ShortName }}.HealthCheck
+  - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
     get: "/healthz"
 
-  - selector: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ title .Global.ProductCode }}{{ title .Global.ShortName }}.Demo
+  - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
     post: "/api/demo"
     body: "*"
     response_body: "pong"
@@ -147,9 +147,9 @@ openapiOptions:
       option:
         swagger: "2.0"
         info:
-          title: "{{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}"
+          title: "{{ .Global.Appname }}"
           contact:
-            name: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}"
+            name: "{{ .Global.ServiceCode }}"
             url: "http://{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}.{{ .Global.APIEndpoint }}"
           license:
             name: "Apache License 2.0"
@@ -158,11 +158,11 @@ openapiOptions:
         host: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}.{{ .Global.APIEndpoint }}"
         base_path: "/"
         schemes:
-        - "HTTP"
+          - "HTTP"
         consumes:
-        - "application/json"
+          - "application/json"
         produces:
-        - "application/json"
+          - "application/json"
         securityDefinitions:
           security:
             BasicAuth:
@@ -172,10 +172,10 @@ openapiOptions:
               in: "IN_HEADER"
               name: "Authorization: Bearer <token>"
         security:
-        - securityRequirement:
-            BasicAuth: {}
-        - securityRequirement:
-            ApiKeyAuth: {}
+          - securityRequirement:
+              BasicAuth: {}
+          - securityRequirement:
+              ApiKeyAuth: {}
         responses:
           "4xx":
             description: "客户端参数异常"
@@ -194,10 +194,10 @@ openapiOptions:
   # grpc.gateway.protoc_gen_openapiv2.options.Operation
   # 对应 proto 中 service 的 rpc
   method:
-    - method: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ title .Global.ProductCode }}{{ title .Global.ShortName }}.HealthCheck
+    - method: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
       option:
         tags:
-        - "internal"
+          - "internal"
         description: '请务删除！\n 接口格式：/healthz?service=test1.v1.opsaid\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
         summary: "健康检测"
         responses:
@@ -205,7 +205,7 @@ openapiOptions:
             examples:
               "application/json": '{"value": "the input value"}'
 
-    - method: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ title .Global.ProductCode }}{{ title .Global.ShortName }}.Demo
+    - method: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
       option:
         tags:
           - "demo"
@@ -219,7 +219,7 @@ openapiOptions:
   # grpc.gateway.protoc_gen_openapiv2.options.Schema
   # 对应 proto 的 message
   message:
-    - message: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.DemoRequest
+    - message: {{ .Global.ProtoPackage }}.DemoRequest
       option:
         # 请求示例
         example: '{ "ping": { "name": "grpc-kit" } }'
@@ -229,14 +229,14 @@ openapiOptions:
             - "ping"
           # 对结构体更详细的描述
           description: "结构体其他更详细的描述"
-    - message: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.DemoResponse
+    - message: {{ .Global.ProtoPackage }}.DemoResponse
       option:
         example: '{"uuid":"99feafb5-bed6-4daf-927a-69a2ab80c485", "pong": { "name": "grpc-kit" } }'
 
   # grpc.gateway.protoc_gen_openapiv2.options.JSONSchema
   # 对应 proto 的 message 下各属性
   field:
-    - field: {{ .Global.ProductCode }}.{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.DemoRequest.uuid
+    - field: {{ .Global.ProtoPackage }}.DemoRequest.uuid
       option:
         # 字段均不做 description 注解，在定义 proto 属性时添加
         # description: "请求的 ping 属性"

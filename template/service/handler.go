@@ -150,11 +150,11 @@ import (
 
 // Register 用于服务启动前环境准备
 func (m *Microservice) Register(ctx context.Context) error {
-	pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}Server(m.server.Server(), m)
+	pb.Register{{ .Global.ServiceTitle }}Server(m.server.Server(), m)
 	grpc_health_v1.RegisterHealthServer(m.server.Server(), health.NewServer())
 
 	// 注册服务信息
-	mux, err := m.baseCfg.Register(ctx, pb.Register{{ title .Global.ProductCode }}{{ title .Global.ShortName }}HandlerFromEndpoint)
+	mux, err := m.baseCfg.Register(ctx, pb.Register{{ .Global.ServiceTitle }}HandlerFromEndpoint)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ global:
   api_endpoint: "api.grpc-kit.com"
   git_domain: "github.com"
   product_code: "demo"
+  organization: "grpc-kit"
 
 template:
   service:

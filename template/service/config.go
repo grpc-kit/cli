@@ -75,7 +75,7 @@ independent:
 # 基础服务配置
 services:
   # 服务的代码，名称唯一且必填，格式：应用短名.接口版本.产品代码
-  service_code: {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
+  service_code: {{ .Global.ServiceCode }}
   # 服务所监听的http地址（如未设置，则不开启gateway服务）
   http_address: 127.0.0.1:8080
   # 服务所监听的grpc地址（如未设置，自动监听在127.0.0.1的随机端口）
