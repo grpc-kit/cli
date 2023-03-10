@@ -77,7 +77,7 @@ func runFuncNew(cmd *cobra.Command, args []string) error {
 			cfgType.Global.GitDomain, cfgType.Global.ProductCode, cfgType.Global.ShortName)
 	}
 
-	// 组织代号选择优先级
+	// 组织代号选择优先级：用户创建时指定 > 默认全局
 	if cfgType.Global.Organization == "" {
 		cfgType.Global.Organization = "grpc-kit"
 	}

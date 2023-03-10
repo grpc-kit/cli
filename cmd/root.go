@@ -88,11 +88,17 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
-
 }
 
 func unmarshalConfig() {
+	// 优先级以用户在 cli 上指定的值最高
+	productCode := cfgType.Global.ProductCode
+
 	if err := viper.Unmarshal(&cfgType); err != nil {
 		// return err
+	}
+
+	if productCode != "" {
+		cfgType.Global.ProductCode = productCode
 	}
 }
