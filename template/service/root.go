@@ -224,6 +224,11 @@ docker-push: ## Push docker image with the application.
 
 ##@ Build Dependencies
 
+.PHONY: protoc
+protoc: ## Download protoc locally if necessary.
+	@echo ">> download binary protoc"
+	@./scripts/binaries.sh protoc
+
 .PHONY: protoc-gen-go
 protoc-gen-go: ## Download protoc-gen-go locally if necessary.
 	@echo ">> download binary protoc-gen-go"

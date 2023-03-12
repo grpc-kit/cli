@@ -2,15 +2,41 @@
 
 主要基于以下几个核心类库实现：
 
-- [grpc](https://github.com/golang/protobuf)
-- [gogo](https://github.com/gogo/protobuf)
+- [grpc](https://github.com/protocolbuffers/protobuf-go)
 - [grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway)
 
 ## 简要概述
 
 快速生成微服务模版，为同一产品提供统一的治理方式，提高多人协作效率
 
-## 生成代码并运行
+## 生成代码并运行（本机方式）
+
+### 创建应用模版
+
+```shell
+mkdir -p $GOPATH/src/github.com/opsaid
+cd $GOPATH/src/github.com/opsaid
+
+grpc-kit-cli new -t service -p opsaid -s test1
+```
+
+### 下载依赖的环境
+
+```shell
+make protoc
+make protoc-gen-go
+make protoc-gen-go-grpc
+make protoc-gen-grpc-gateway
+make protoc-gen-openapiv2
+```
+
+### 运行应用代码
+
+```shell
+make run
+```
+
+## 生成代码并运行（容器方式）
 
 ### 创建应用模版
 
@@ -19,7 +45,7 @@ docker run \
     --rm \
     -v $(pwd):/usr/local/src \
     -w /usr/local/src \
-    registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:0.2.4-beta.1 \
+    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.0 \
     grpc-kit-cli new -t service -p opsaid -s test1
 ```
 
@@ -31,11 +57,11 @@ docker run -i -t --rm \
     -v $(pwd):/usr/local/src \
     -w /usr/local/src \
     --network host \
-    registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:0.2.4-beta.1 \
+    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.0 \
     make run
 ```
 
-### 服务访问测试
+## 服务访问测试
 
 - 微服务接口文档
 

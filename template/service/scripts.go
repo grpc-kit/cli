@@ -199,15 +199,24 @@ function release() {
 }
 
 function update() {
-  GOHOSTS=$(go env GOHOSTOS)
+  GOHOSTOS=$(go env GOHOSTOS)
 
   PREFIX_VERSION=$(prefix)
   RELEASE_VERSION=$(release)
 
-  if test ${GOHOSTS} = "darwin"; then
-    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml
+  if test $PREFIX_VERSION == $RELEASE_VERSION; then
+    return
+  fi
+
+  if test ${GOHOSTOS} = "darwin"; then
+    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml
   else
-    sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml
+    # fix run in container
+    # sed: couldn't open temporary file sed1DDoX9: Permission denied
+    #sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml
+    cp api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml /tmp/microservice.openapiv2.yaml
+    sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" /tmp/microservice.openapiv2.yaml
+    mv /tmp/microservice.openapiv2.yaml api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml > /dev/null 2>&1
   fi
 }
 
@@ -525,6 +534,43 @@ if test -z $1; then
   echo "\t ./scripts/binaries.sh protoc-gen-go"
   exit 0;
 fi
+
+# https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
+# https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-aarch_64.zip
+# https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-osx-aarch_64.zip
+# https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-osx-x86_64.zip
+function protoc() {
+  GOHOSTOS=$(go env GOHOSTOS)
+  GOARCH=$(go env GOARCH)
+  GOPATH=$(go env GOPATH)
+
+  TARGET_OS=$GOHOSTOS
+  TARGET_ARCH=$GOARCH
+
+  if test "$GOHOSTOS" == "darwin"; then
+    TARGET_OS="osx"
+  fi
+
+  if test "$GOARCH" == "arm64"; then
+    TARGET_ARCH="aarch_64"
+  elif test "$GOARCH" == "amd64"; then
+    TARGET_ARCH="x86_64"
+  fi
+
+  echo "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-"$TARGET_OS"-"$TARGET_ARCH".zip"
+
+  cd /tmp
+  curl -L -O "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-"$TARGET_OS"-"$TARGET_ARCH".zip"
+
+  unzip protoc-21.12-"$TARGET_OS"-"$TARGET_ARCH".zip
+  mv bin/protoc "$GOPATH/bin/"
+  mv include/google /usr/local/include/
+
+  rm -f protoc-21.12-"$TARGET_OS"-"$TARGET_ARCH".zip
+  rm -f readme.txt
+  rmdir bin/
+  rmdir include/
+}
 
 function protoc-gen-go-grpc() {
   go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2

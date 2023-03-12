@@ -23,3 +23,4 @@ config/app-*.toml
 .bak
 .idea/
 build/
+.DS_Store
