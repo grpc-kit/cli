@@ -44,7 +44,38 @@ build-all: clean ## Build all binaries that support the operating system.
 .PHONY: docker-build
 docker-build: ## Build docker image with the application.
 	@echo ">> docker build"
-	@docker build ./ -t registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${RELEASE_VERSION}
+	@# TODO; platform 参数不支持填写多个？
+	@docker buildx build --platform linux/amd64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
+	@docker buildx build --platform linux/arm64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
+	@docker buildx build --platform darwin/amd64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
+	@docker buildx build --platform darwin/arm64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
+
+##@ Build Dependencies
+
+.PHONY: protoc
+protoc: ## Download protoc locally if necessary.
+	@echo ">> download binary protoc"
+	@./scripts/binaries.sh protoc
+
+.PHONY: protoc-gen-go
+protoc-gen-go: ## Download protoc-gen-go locally if necessary.
+	@echo ">> download binary protoc-gen-go"
+	@./scripts/binaries.sh protoc-gen-go
+
+.PHONY: protoc-gen-go-grpc
+protoc-gen-go-grpc: ## Download protoc-gen-go-grpc locally if necessary.
+	@echo ">> download binary protoc-gen-go-grpc"
+	@./scripts/binaries.sh protoc-gen-go-grpc
+
+.PHONY: protoc-gen-grpc-gateway
+protoc-gen-grpc-gateway: ## Download protoc-gen-grpc-gateway locally if necessary.
+	@echo ">> download binary protoc-gen-grpc-gateway"
+	@./scripts/binaries.sh protoc-gen-grpc-gateway
+
+.PHONY: protoc-gen-openapiv2
+protoc-gen-openapiv2: ## Download protoc-gen-openapiv2 locally if necessary.
+	@echo ">> download binary protoc-gen-openapiv2"
+	@./scripts/binaries.sh protoc-gen-openapiv2
 
 ##@ Clean
 
