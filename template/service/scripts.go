@@ -209,11 +209,11 @@ function update() {
   fi
 
   if test ${GOHOSTOS} = "darwin"; then
-    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml
+    sed -i "" "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml
   else
     # fix run in container
     # sed: couldn't open temporary file sed1DDoX9: Permission denied
-    #sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml
+    #sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml
     cp api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml /tmp/microservice.openapiv2.yaml
     sed -i "s#version: \"${PREFIX_VERSION}\"#version: \"${RELEASE_VERSION}\"#g" /tmp/microservice.openapiv2.yaml
     mv /tmp/microservice.openapiv2.yaml api/opsaid/test1/${API_VERSION}/microservice.openapiv2.yaml > /dev/null 2>&1
