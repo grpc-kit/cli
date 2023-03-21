@@ -14,8 +14,6 @@
 
 package service
 
-import "fmt"
-
 func (t *templateService) fileDirectoryScripts() {
 	t.files = append(t.files, &templateFile{
 		name:  "scripts/env",
@@ -251,6 +249,13 @@ fi
 GOHOSTOS=$(go env GOHOSTOS)
 DEPLOY_ENV=$1
 
+# 解决 linux 与 darwin 的 sed 存在的差异
+if test ${GOHOSTOS} = "darwin"; then
+  SED="sed -i ''"
+else
+  SED="sed -i"
+fi
+
 # 生成的容器镜像地址
 IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
 
@@ -262,12 +267,24 @@ function clean() {
 
 function systemd() {
   mkdir -p deploy/systemd/
-  cp -rf scripts/templates/systemd/* deploy/systemd/
+  cp -rf scripts/templates/systemd/microservice.service deploy/systemd/${APPNAME}.service
+
+  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" deploy/systemd/${APPNAME}.service
+  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" deploy/systemd/${APPNAME}.service
+  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" deploy/systemd/${APPNAME}.service
+  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" deploy/systemd/${APPNAME}.service
+  eval "$SED" "s#_APPNAME_#${APPNAME}#g" deploy/systemd/${APPNAME}.service
 }
 
 function supervisor() {
   mkdir -p deploy/supervisor/
-  cp -rf scripts/templates/supervisor/* deploy/supervisor/
+  cp -rf scripts/templates/supervisor/microservice.conf deploy/supervisor/${APPNAME}.conf
+
+  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" deploy/supervisor/${APPNAME}.conf
+  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" deploy/supervisor/${APPNAME}.conf
+  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" deploy/supervisor/${APPNAME}.conf
+  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" deploy/supervisor/${APPNAME}.conf
+  eval "$SED" "s#_APPNAME_#${APPNAME}#g" deploy/supervisor/${APPNAME}.conf
 }
 
 function kubernetes() {
@@ -279,25 +296,14 @@ function kubernetes() {
     cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml deploy/kubernetes/${DEPLOY_ENV}/config/configmap/app.yaml
   fi
 
-  if test ${GOHOSTOS} = "darwin"; then
-    sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-    sed -i "" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-    sed -i "" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-    sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    sed -i "" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-    sed -i "" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  else
-    sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-    sed -i "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-    sed -i "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-    sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-    sed -i "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-    sed -i "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  fi
+  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+  eval "${SED}" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  eval "${SED}" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+  eval "${SED}" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
 }
 
 clean
@@ -308,13 +314,13 @@ kubernetes
 	})
 
 	t.files = append(t.files, &templateFile{
-		name:  fmt.Sprintf("scripts/templates/systemd/%v-%v-%v.service", t.config.Global.ProductCode, t.config.Global.ShortName, t.config.Template.Service.APIVersion),
-		parse: true,
+		name:  "scripts/templates/systemd/microservice.service",
+		parse: false,
 		body: `
 [Unit]
 After=network-online.target
 Documentation=http://(app.yaml:services.http_address)/openapi-spec/
-Description=The {{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }} microservice. For more API detailed, please refer to the docs
+Description=The _SERVICE_CODE_ microservice. For more API detailed, please refer to the docs
 
 [Service]
 Type=simple
@@ -325,21 +331,21 @@ TimeoutSec=60s
 LimitNOFILE=65535
 KillMode=control-group
 MemoryLimit=2048M
-ExecStart=/usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/service --config /usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/config/app.yaml
+ExecStart=/usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/service --config /usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/config/app.yaml
 
 [Install]
-Alias={{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}.service
+Alias=_APPNAME_.service
 WantedBy=multi-user.target
 `,
 	})
 
 	t.files = append(t.files, &templateFile{
-		name:  fmt.Sprintf("scripts/templates/supervisor/%v-%v-%v.conf", t.config.Global.ProductCode, t.config.Global.ShortName, t.config.Template.Service.APIVersion),
-		parse: true,
+		name:  "scripts/templates/supervisor/microservice.conf",
+		parse: false,
 		body: `
-[program:{{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}]
-command=/usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/service --config /usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/config/app.yaml
-directory=/usr/local/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/
+[program:_APPNAME_]
+command=/usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/service --config /usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/config/app.yaml
+directory=/usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/
 autostart=true
 autorestart=true
 startsecs=10
