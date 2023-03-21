@@ -198,7 +198,7 @@ openapiOptions:
       option:
         tags:
           - "internal"
-        description: '请务删除！\n 接口格式：/healthz?service=test1.v1.opsaid\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
+        description: '请务删除！\n 接口格式：/healthz?service={{ .Global.ServiceCode }}\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
         summary: "健康检测"
         responses:
           "200":
