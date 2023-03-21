@@ -103,29 +103,34 @@ source scripts/env
 
 # 生成 *.pb.go 文件
 protoc \
+    -I ./ \
     -I /usr/local/include/ \
     -I "${GOPATH}"/src \
     -I "${GOPATH}"/src/github.com/grpc-ecosystem/grpc-gateway/ \
     -I "${GOPATH}"/src/github.com/googleapis/googleapis/ \
-    --go_out "${GOPATH}"/src/ \
+    --go_opt paths=source_relative \
+    --go_out ./ \
+    --go-grpc_opt paths=source_relative \
     --go-grpc_opt require_unimplemented_servers=false \
-    --go-grpc_out "${GOPATH}"/src/ \
-    "${GOPATH}"/src/{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/*.proto
+    --go-grpc_out ./ \
+    ./api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/*.proto
 
 # 生成 *.pb.gw.go 与 swagger 接口文档
 protoc \
+    -I ./ \
     -I /usr/local/include/ \
     -I "${GOPATH}"/src \
     -I "${GOPATH}"/src/github.com/googleapis/googleapis/ \
     -I "${GOPATH}"/src/github.com/grpc-ecosystem/grpc-gateway/ \
-    --grpc-gateway_opt grpc_api_configuration=api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.gateway.yaml \
-    --grpc-gateway_out "${GOPATH}"/src/ \
+    --grpc-gateway_opt paths=source_relative \
+    --grpc-gateway_opt grpc_api_configuration=./api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.gateway.yaml \
+    --grpc-gateway_out ./ \
     --openapiv2_opt disable_default_errors=true \
     --openapiv2_opt disable_service_tags=true \
-    --openapiv2_opt grpc_api_configuration=api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.gateway.yaml \
-    --openapiv2_opt openapi_configuration=api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml \
-    --openapiv2_out "${GOPATH}"/src/ \
-    "${GOPATH}"/src/{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
+    --openapiv2_opt grpc_api_configuration=./api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.gateway.yaml \
+    --openapiv2_opt openapi_configuration=./api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.openapiv2.yaml \
+    --openapiv2_out ./ \
+    ./api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.proto
 
 # 移动生成的 microservice.swagger.json 文件
 if test -f ./api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/${API_VERSION}/microservice.swagger.json; then
