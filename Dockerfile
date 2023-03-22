@@ -29,7 +29,12 @@ RUN make protoc \
 	&& make protoc-gen-grpc-gateway \
 	&& make protoc-gen-openapiv2
 
+FROM --platform=$TARGETPLATFORM gcr.io/kaniko-project/executor:v1.9.1 as kaniko
+
 FROM --platform=$TARGETPLATFORM golang:1.18.10-bullseye
+
+# 拷贝 kaniko 内容
+COPY --from=kaniko /kaniko /kaniko
 
 # 拷贝上阶段编译后的文件
 COPY --from=builder /usr/local/src/build/grpc-kit-cli-* /go/bin/grpc-kit-cli
