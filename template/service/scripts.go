@@ -89,7 +89,7 @@ function run() {
       -v $(pwd):/usr/local/src \
       -w /usr/local/src \
       --network host \
-      registry.cn-hangzhou.aliyuncs.com/grpc-kit/cli:${CLI_VERSION} \
+      ccr.ccs.tencentyun.com/grpc-kit/cli:${CLI_VERSION} \
       make run
 }
 
