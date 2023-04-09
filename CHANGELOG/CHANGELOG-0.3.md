@@ -11,6 +11,48 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2023-04-09
+
+### Added
+
+- 使用文档更新
+
+  1. 去除 [gogo](https://github.com/gogo/protobuf) 模块文档； 
+  2. 更新 grpc 地址由 https://github.com/golang/protobuf 转变为 https://github.com/protocolbuffers/protobuf-go；
+
+- 多平台镜像构建
+
+  1. 由于阿里云镜像中心不支持存放多架构容器更改为使用腾讯容器镜像服务；
+  2. 当前多架构容器仅支持使用 "docker buildx"，暂不支持 "podman"；
+
+- 添加依赖工具的下载
+
+  ```shell
+  make protoc
+  make protoc-gen-go
+  make protoc-gen-go-grpc
+  make protoc-gen-grpc-gateway
+  make protoc-gen-openapiv2
+  ```
+
+- 仅版本号发生变更时才执行 sed
+
+  1. 更改了 scripts/version.sh 中的 update 方法；
+  2. 仅当先前与当前版本号不一致才更改 microservice.openapiv2.yaml 文件；
+  3. 更改了 /tmp/microservice.openapiv2.yaml 生成临时文件地址；
+
+### Fixed
+
+- 在 "oidc authenticator" 的 logger 存在空指针错误
+
+  异常代码位置
+
+  ```shell
+  github.com/grpc-kit/pkg@v0.3.0/cfg/security.go:76
+  ```
+
+  当设置的 "oidc issuer" 可访问，但未正常返回 "/.well-known/openid-configuration" 日志输出触发了空指针。
+
 ## [0.3.0] - 2023-03-10
 
 ### Added

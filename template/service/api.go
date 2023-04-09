@@ -32,11 +32,11 @@ package {{ .Global.ProtoPackage }};
 
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
+// 同服务内的 proto 文件使用相对路径引用，既不包含代码仓库前缀
+import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
+
 // 引入依赖的外部 proto 文件
 import "github.com/grpc-kit/api/known/status/v1/response.proto";
-
-// 同组 RPC 方法对应一个 proto 文件，以该组 RPC 名称的小写字母为文件名
-import "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
 
 // 该微服务支持的 RPC 方法定义
 service {{ title .Global.ServiceTitle }} {
@@ -60,13 +60,13 @@ package {{ .Global.ProtoPackage }};
 
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
-// 引入google公共类型
+// 引入 google 公共类型
 import "google/protobuf/empty.proto";
 
-// 引入第三方依赖的proto文件
+// 引入第三方依赖的 proto 文件
 import "github.com/grpc-kit/api/known/example/v1/example.proto";
 
-// DemoRequest Demo方法请求可使用的接口参数
+// DemoRequest Demo 方法请求可使用的接口参数
 message DemoRequest {
   // UUID 资源编号
   string uuid = 1;
@@ -143,7 +143,7 @@ openapiOptions:
   # grpc.gateway.protoc_gen_openapiv2.options.Swagger
   # 对应 swagger 属性，一般不做更改
   file:
-    - file: "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.proto"
+    - file: "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.proto"
       option:
         swagger: "2.0"
         info:
@@ -198,7 +198,7 @@ openapiOptions:
       option:
         tags:
           - "internal"
-        description: '请务删除！\n 接口格式：/healthz?service=test1.v1.opsaid\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
+        description: '请务删除！\n 接口格式：/healthz?service={{ .Global.ServiceCode }}\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
         summary: "健康检测"
         responses:
           "200":

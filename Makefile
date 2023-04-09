@@ -44,11 +44,7 @@ build-all: clean ## Build all binaries that support the operating system.
 .PHONY: docker-build
 docker-build: ## Build docker image with the application.
 	@echo ">> docker build"
-	@# TODO; platform 参数不支持填写多个？
-	@docker buildx build --platform linux/amd64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
-	@docker buildx build --platform linux/arm64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
-	@docker buildx build --platform darwin/amd64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
-	@docker buildx build --platform darwin/arm64 ./ --manifest ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION}
+	@docker buildx build --platform linux/amd64,linux/arm64 ./ -t ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION} --push
 
 ##@ Build Dependencies
 
