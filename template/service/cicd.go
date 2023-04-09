@@ -54,7 +54,10 @@ check-protoc:
   script:
     - which go
     - which protoc
-    - which protoc-gen-gogo
+    - which protoc-gen-go
+    - which protoc-gen-grpc
+    - which protoc-gen-grpc-gateway
+    - which protoc-gen-openapiv2
 
 # 业务单元测试
 unit-tests:
