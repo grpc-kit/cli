@@ -1,3 +1,5 @@
+ARG TARGETPLATFORM
+
 FROM --platform=$TARGETPLATFORM golang:1.18.10-bullseye as builder
 
 # 更换镜像地址
