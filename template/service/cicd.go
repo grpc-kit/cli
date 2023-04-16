@@ -19,20 +19,25 @@ func (t *templateService) fileDirectoryCICD() {
 		name:  ".gitlab/workflows/grpc-kit.yml",
 		parse: true,
 		body: `
-# 默认全局配置
 default:
+  # TODO；根据具体情况选择运行的 runner 标签
   tags:
     - grpc-kit
+  # TODO; 依赖文件注意使用缓存，避免每次下载
+  #cache:
+  #  paths:
+  #    - /go/pkg/mod/
+  # 框架使用的构建镜像
+  image: ccr.ccs.tencentyun.com/grpc-kit/cli:{{ .Global.ReleaseVersion }}
 
 # 默认全局变量
 variables:
   CGO_ENABLED: "0"
   GIT_SSL_NO_VERIFY: "true"
-  #GO111MODULE: "on"
-  #GOPROXY: "https://goproxy.cn"
-  #GOSUMDB: "sum.golang.google.cn"
-  #GOPATH: "/home/gitlab-runner/go"
-  #GOPRIVATE: ""
+  GO111MODULE: "on"
+  GOPROXY: "https://goproxy.cn"
+  GOSUMDB: "sum.golang.google.cn"
+  #GOPRIVATE: "https://example.com"
 
 # 流水线各阶段
 stages:
@@ -48,71 +53,109 @@ go-lint:
   script:
     - make lint
 
-# 依赖的 protoc 二进制检测
-check-protoc:
+# 依赖的相关依赖的组件
+check-dep:
   stage: pre
   script:
     - which go
     - which protoc
     - which protoc-gen-go
-    - which protoc-gen-grpc
+    - which protoc-gen-go-grpc
     - which protoc-gen-grpc-gateway
     - which protoc-gen-openapiv2
 
 # 业务单元测试
 unit-tests:
   stage: test
+  needs:
+    - go-lint
+    - check-dep
   script:
     - make test
 
+# 代码覆盖率
+coverage:
+  stage: test
+  script:
+    - go test ./... -coverprofile=coverage.txt -covermode count
+    - cat coverage.txt
+
+# 生成发送测试报告
+reports:
+  stage: test
+  needs:
+    - unit-tests
+    - coverage
+  script:
+    - echo "pass"
+
 # 编译二进制文件
-build-binary:
+binary-local:
   stage: build
+  needs:
+    - reports
   script:
     - make build
   artifacts:
     paths:
       - build/
     expire_in: 24h
-
-# 打包容器镜像
-build-container:
-  stage: build
-  script:
-    - echo "package tar"
-  artifacts:
-    paths:
-      - build/
-    expire_in: 24h
-  only:
-    - main
   when: manual
+  allow_failure: false
+
+# 发布容器至默认镜像中心
+container-registry:
+  stage: build
+  needs:
+    - binary-local
+  script:
+    - source scripts/env
+    - export VERSION=$(cat VERSION)
+    - echo ${CI_REGISTRY_PASSWORD} | docker login ${CI_REGISTRY} -u ${CI_REGISTRY_USER} --password-stdin
+    - /kaniko/executor --dockerfile ${CI_PROJECT_DIR}/Dockerfile --context ${CI_PROJECT_DIR} --destination ${CI_REGISTRY_IMAGE}:${VERSION}
 
 # 打成各种安装包，如：tar、rpm、deb
-build-package:
+release-package:
   stage: build
+  needs:
+    - binary-local
   script:
     - echo "package tar"
     - echo "package rpm"
     - echo "package deb"
-  only:
-    - main
-  when: manual
+  artifacts:
+    paths:
+      - build/
+    expire_in: 24h
 
 # 部署测试环境
-deploy-test:
+env-test:
   stage: deploy
+  needs:
+    - release-package
+    - container-registry
   script:
-    - echo "deploy dev"
+    - echo "deploy test"
+
+# 部署准线上环境
+env-staging:
+  stage: production
+  needs:
+    - env-test
+  script:
+    - echo "deploy staging"
 
 # 部署正式环境，手工确认
-production:
+env-prod:
   stage: production
+  needs:
+    - env-staging
   script:
     - echo "deploy production"
   only:
     - main
   when: manual
+  allow_failure: false
 `,
 	})
 }
