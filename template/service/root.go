@@ -136,16 +136,6 @@ BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/vars.Appname={{ .Global.ProductC
                 -X 'github.com/grpc-kit/pkg/vars.CommitUnixTime=${COMMIT_DATE}' \
                 -X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
 
-# 构建Docker容器变量
-IMAGE_FROM      ?= scratch
-IMAGE_HOST      ?= hub.docker.com
-IMAGE_NAME      ?= ${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}
-IMAGE_VERSION   ?= ${RELEASE_VERSION}
-
-# 部署与运行相关变量
-BUILD_ENV       ?= local
-DEPLOY_ENV      ?= dev
-
 ##@ General
 
 .PHONY: help
@@ -163,15 +153,11 @@ precheck: ## Check environment.
 
 .PHONY: generate
 manifests: ## Generate deployment manifests files.
-	@NAMESPACE=${NAMESPACE} \
-		IMAGE_NAME=${IMAGE_NAME} \
-		IMAGE_VERSION=${IMAGE_VERSION} \
-		BUILD_ENV=${BUILD_ENV} ./scripts/manifests.sh ${DEPLOY_ENV}
+	@./scripts/manifests.sh ${TEMPLATES}
 
 generate: precheck ## Generate code from proto files.
 	@echo ">> generation release version"
 	@./scripts/version.sh update
-
 	@echo ">> generation code from proto files"
 	@./scripts/genproto.sh
 

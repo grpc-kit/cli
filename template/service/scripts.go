@@ -65,21 +65,6 @@ if test -z "${DOCKER_IMAGE_VERSION}"; then
 fi
 
 function build() {
-  # 如未设置父镜像，默认为 scratch
-  if test -z ${DOCKER_IMAGE_FROM}; then
-    DOCKER_IMAGE_FROM=scratch
-  fi
-
-  cp scripts/templates/Dockerfile ./
-
-  GOHOSTOS=$(go env GOHOSTOS)
-
-  if test ${GOHOSTOS} = "darwin"; then
-    sed -i "" "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
-  else
-    sed -i "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
-  fi
-
   docker build -t ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION} ./
   echo "Now you can upload image: "docker push ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}""
 }
@@ -246,13 +231,13 @@ $1
 
 source scripts/env
 
-if test -z $1; then
-  echo "Usage:"
-  echo "\t ./scripts/manifests.sh dev"
+TEMPLATES=$1
+if test -z "${TEMPLATES}"; then
+  TEMPLATES=dockerfile
 fi
 
 GOHOSTOS=$(go env GOHOSTOS)
-DEPLOY_ENV=$1
+KUBERNETES_NAMESPACE=default
 
 # 解决 linux 与 darwin 的 sed 存在的差异
 if test ${GOHOSTOS} = "darwin"; then
@@ -261,10 +246,27 @@ else
   SED="sed -i"
 fi
 
-# 生成的容器镜像地址
-IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
+# 生成的镜像地址
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  CI_REGISTRY_IMAGE=docker.io/${PRODUCT_CODE}/${SHORT_NAME}
+fi
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  DOCKER_IMAGE_VERSION=latest
+fi
+
+# 编译与部署环境
+if test -z "${BUILD_ENV}"; then
+  BUILD_ENV=local
+fi
+if test -z "${DEPLOY_ENV}"; then
+  DEPLOY_ENV=dev
+fi
+if test -n "${BIZ_GROUP_APPID}"; then
+  KUBERNETES_NAMESPACE=biz-${DEPLOY_ENV}-${BIZ_GROUP_APPID}
+fi
 
 function clean() {
+  rm -rf Dockerfile
   rm -rf deploy/systemd/
   rm -rf deploy/supervisor/
   rm -rf deploy/kubernetes/${DEPLOY_ENV}
@@ -302,19 +304,45 @@ function kubernetes() {
   fi
 
   eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
+  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
   eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-  eval "${SED}" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-  eval "${SED}" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
+  eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
 }
 
-clean
-systemd
-supervisor
-kubernetes
+function dockerfile() {
+  # 如未设置父镜像，默认为 scratch
+  if test -z ${DOCKER_IMAGE_FROM}; then
+    DOCKER_IMAGE_FROM=scratch
+  fi
+
+  cp scripts/templates/Dockerfile ./
+
+  GOHOSTOS=$(go env GOHOSTOS)
+
+  if test ${GOHOSTOS} = "darwin"; then
+    sed -i "" "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
+  else
+    sed -i "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
+  fi
+}
+
+# 不做清理
+#clean
+
+# 避免运行无意义的指令
+if test "${TEMPLATES}" = "dockerfile"; then
+  dockerfile
+elif test "${TEMPLATES}" = "kubernetes"; then
+  kubernetes
+elif test "${TEMPLATES}" = "systemd"; then
+  systemd
+elif test "${TEMPLATES}" = "supervisor"; then
+  supervisor
+fi
 `,
 	})
 
@@ -367,7 +395,7 @@ stderr_logfile=/var/log/supervisor/%(program_name)s.log
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: biz-DEPLOY_ENV-NAMESPACE
+namespace: _KUBERNETES_NAMESPACE_
 
 commonLabels:
   {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
@@ -393,8 +421,8 @@ resources:
 - workloads/deployment.yaml
 
 images:
-- name: IMAGE_NAME
-  newTag: IMAGE_VERSION
+- name: _CI_REGISTRY_IMAGE_
+  newTag: _DOCKER_IMAGE_VERSION_
 `,
 	})
 
@@ -412,7 +440,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}.biz-DEPLOY_ENV-NAMESPACE.{{ .Global.APIEndpoint }}
+  - host: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}._KUBERNETES_NAMESPACE_.{{ .Global.APIEndpoint }}
     http:
       paths:
       - path: /
@@ -485,7 +513,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: status.podIP
-        image: IMAGE_NAME:latest
+        image: _CI_REGISTRY_IMAGE_:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 5
