@@ -57,12 +57,17 @@ if test -z $1; then
 fi
 
 # 生成的容器镜像地址
-IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  CI_REGISTRY_IMAGE=docker.io/${PRODUCT_CODE}/${SHORT_NAME}
+fi
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  DOCKER_IMAGE_VERSION=latest
+fi
 
 function build() {
-  # 如未设置父镜像，默认为scratch
-  if test -z ${IMAGE_FROM}; then
-    IMAGE_FROM=scratch
+  # 如未设置父镜像，默认为 scratch
+  if test -z ${DOCKER_IMAGE_FROM}; then
+    DOCKER_IMAGE_FROM=scratch
   fi
 
   cp scripts/templates/Dockerfile ./
@@ -70,17 +75,17 @@ function build() {
   GOHOSTOS=$(go env GOHOSTOS)
 
   if test ${GOHOSTOS} = "darwin"; then
-    sed -i "" "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
+    sed -i "" "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
   else
-    sed -i "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
+    sed -i "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
   fi
 
-  docker build -t ${IMAGE_ADDR} ./
-  echo "Now you can upload image: "docker push ${IMAGE_ADDR}""
+  docker build -t ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION} ./
+  echo "Now you can upload image: "docker push ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}""
 }
 
 function push() {
-  docker push ${IMAGE_ADDR}
+  docker push ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}
 }
 
 function run() {
@@ -159,7 +164,7 @@ fi
 	t.files = append(t.files, &templateFile{
 		name: "scripts/templates/Dockerfile",
 		body: `
-FROM {{IMAGE_FROM}}
+FROM _DOCKER_IMAGE_FROM_
 
 WORKDIR /opt
 

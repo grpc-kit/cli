@@ -137,7 +137,6 @@ BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/vars.Appname={{ .Global.ProductC
                 -X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
 
 # 构建Docker容器变量
-BUILD_GOOS      ?= $(shell ${GO} env GOOS)
 IMAGE_FROM      ?= scratch
 IMAGE_HOST      ?= hub.docker.com
 IMAGE_NAME      ?= ${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}
@@ -194,7 +193,7 @@ build: clean generate ## Build binary files according to the target system arch.
 	@mkdir build
 	@mkdir build/deploy
 	@${GO} mod tidy
-	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
+	@GOOS=${GOOS} GOARCH=${GOARCH} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
 
 .PHONY: run
 run: generate ## Run a application from your host.
@@ -208,19 +207,12 @@ docker-run: ## Run a application from your docker.
 .PHONY: docker-build
 docker-build: build manifests ## Build docker image with the application.
 	@echo ">> docker build"
-	@IMAGE_FROM=${IMAGE_FROM} \
-		IMAGE_HOST=${IMAGE_HOST} \
-		NAMESPACE=${NAMESPACE} \
-		SHORTNAME=${SHORTNAME} \
-		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh build
+	@./scripts/docker.sh build
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the application.
 	@echo ">> docker push"
-	@IMAGE_HOST=${IMAGE_HOST} \
-		NAMESPACE=${NAMESPACE} \
-		SHORTNAME=${SHORTNAME} \
-		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
+	@./scripts/docker.sh push
 
 ##@ Build Dependencies
 
