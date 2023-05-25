@@ -158,4 +158,216 @@ env-prod:
   allow_failure: false
 `,
 	})
+
+	t.files = append(t.files, &templateFile{
+		name:  ".jenkins/workflows/Jenkinsfile",
+		parse: true,
+		body: `
+pipeline {
+  agent {
+    kubernetes {
+      // TODO；目标集群，由系统管理员确认
+      cloud 'dev'
+      inheritFrom 'grpc'
+      defaultContainer 'build'
+    }
+  }
+
+  parameters {
+    booleanParam(name: 'CI_BIZ_CODE_BUILD', defaultValue: true, description: '是否构建镜像，取消则直接至 k8s yaml 更新')
+    booleanParam(name: 'CI_PIPELINE_SILENCE', defaultValue: false, description: '执行流水线全程静默无需二次确认')
+    // TODO;
+    choice(name: 'CI_REGISTRY_HOSTNAME', choices: ['ccr.ccs.tencentyun.com'], description: '支持的镜像中心列表')
+    // TODO;
+    choice(name: 'CI_REGISTRY_NAMESPACE', choices: ['opsaid'], description: '支持的镜像中心列表')
+    // TODO;
+    string(name: 'CI_BIZ_REPO_URL', defaultValue: 'https://{{ .Global.Repository }}.git', description: '业务源代码仓库')
+    // TODO;
+    string(name: 'CI_OPS_REPO_URL', defaultValue: 'https://{{ .Global.Repository }}.git', description: '运维源代码仓库')
+    // TODO;
+    string(name: 'CI_BIZ_BRANCH_NAME', defaultValue: 'main', description: '业务源代码仓库拉取的分支')
+    // TODO;
+    credentials(name: 'CI_BIZ_REPO_AUTH', defaultValue: '2a60ed63-1f38-4b18-a820-60cce23aa32e', credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', required: false)
+    // TODO;
+    credentials(name: 'CI_OPS_REPO_AUTH', defaultValue: '2a60ed63-1f38-4b18-a820-60cce23aa32e', credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', required: false)
+  }
+
+  environment {
+    GOPROXY = "https://goproxy.cn"
+  }
+
+  options {
+    disableConcurrentBuilds(abortPrevious: true)
+    disableResume()
+    timeout(time: 1, unit: 'HOURS')
+  }
+
+  stages {
+    stage('Prepare') {
+      when {
+        allOf {
+          not {
+            environment name: 'CI_BIZ_REPO_URL', value: ''
+          }
+          not {
+            environment name: 'CI_BIZ_BRANCH_NAME', value: ''
+          }
+          environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
+        }
+      }
+
+      steps {
+        checkout scmGit(
+            branches: [
+                [name: CI_BIZ_BRANCH_NAME]
+            ],
+            extensions: [
+                [$class: 'RelativeTargetDirectory', relativeTargetDir: 'source']
+            ],
+            userRemoteConfigs: [
+                [
+                    credentialsId: CI_BIZ_REPO_AUTH,
+                    url: CI_BIZ_REPO_URL
+                ]
+            ]
+        )
+
+        // 执行代码检查
+        sh '''
+           cd source
+           make protoc
+           make lint
+        '''
+      }
+    }
+
+    stage('Test') {
+      when {
+        allOf {
+          not {
+            environment name: 'CI_BIZ_REPO_URL', value: ''
+          }
+          not {
+            environment name: 'CI_BIZ_BRANCH_NAME', value: ''
+          }
+          environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
+        }
+      }
+
+      steps {
+        // 执行单元测试等
+        sh '''
+           cd source
+           make test
+        '''
+      }
+    }
+
+    stage('Build') {
+      when {
+        allOf {
+          not {
+            environment name: 'CI_BIZ_REPO_URL', value: ''
+          }
+          not {
+            environment name: 'CI_BIZ_BRANCH_NAME', value: ''
+          }
+          environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
+        }
+      }
+
+      steps {
+        // 选择特定语言容器，执行代码编译
+        container('build') {
+          sh '''
+             cd source
+             make build
+          '''
+        }
+
+        // 选择 kaniko 容器，执行构建镜像并上传
+        container('kaniko') {
+          sh '''
+             cd source
+
+             RELEASE_VERSION=$(cat VERSION)
+             IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+
+             cp ../gitops/Dockerfile ./
+             /kaniko/executor --dockerfile ./Dockerfile --context ./ --destination ${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${JOB_BASE_NAME}:${IMAGE_VERSION} --log-format text --log-timestamp
+          '''
+        }
+      }
+    }
+
+    stage('Confirm') {
+      when {
+        environment name: 'CI_PIPELINE_SILENCE', value: 'false'
+      }
+
+      steps {
+        container('kcli') {
+          sh '''
+            cd gitops/deploy/kubernetes/dev
+            cat kustomization.yaml
+          '''
+        }
+
+        // 人工审批确认，是否部署至环境
+        input "Does look ok?"
+      }
+    }
+
+    stage('Production') {
+      steps {
+        container('kcli') {
+
+          withCredentials([gitUsernamePassword(credentialsId: CI_OPS_REPO_AUTH, gitToolName: 'git-tool')]) {
+            wrap([$class: 'BuildUser']) {
+              script {
+                if (env.CI_BIZ_CODE_BUILD == "true" ) {
+                  sh '''
+                     cd source
+                     RELEASE_VERSION=$(cat VERSION)
+                     IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+                     cd ../
+
+                     cd gitops/deploy/kubernetes/dev
+                     /bin/kustomize edit set image ${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${JOB_BASE_NAME}:${IMAGE_VERSION}
+
+                     # fix: https://github.blog/2022-04-12-git-security-vulnerability-announced/
+                     git config --global --add safe.directory ${WORKSPACE}/gitops
+
+                     git config user.name ${BUILD_USER}
+                     git config user.email ${BUILD_USER_EMAIL}
+
+                     git add kustomization.yaml
+                     git commit -m "build: set image ${JOB_BASE_NAME}:${IMAGE_VERSION}"
+
+                     git remote add gitops ${CI_OPS_REPO_URL}
+                     git push gitops HEAD:refs/heads/main
+                  '''
+                }
+              }
+            }
+
+            sh '''
+               cd gitops/deploy/kubernetes/dev
+               /bin/kustomize build | /bin/kubectl apply -f -
+            '''
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      // TODO；根据实际情况调用接口推送通知
+      echo "Send notifications for result: ${currentBuild.result}"
+    }
+  }
+}
+`,
+	})
 }
