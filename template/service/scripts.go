@@ -14,6 +14,8 @@
 
 package service
 
+import "fmt"
+
 func (t *templateService) fileDirectoryScripts() {
 	t.files = append(t.files, &templateFile{
 		name:  "scripts/env",
@@ -355,14 +357,14 @@ function kubernetes() {
     cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml ${TEMPLATE_PATH}/config/configmap/app.yaml
   fi
 
-  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/kustomization.yaml
-  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/kustomization.yaml
-  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/workloads/deployment.yaml
-  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/service/ingresses.yaml
-  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/service/ingresses.yaml
-  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/kustomization.yaml
-  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/workloads/deployment.yaml
-  eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" ${TEMPLATE_PATH}/kustomization.yaml
+  for FILE in kustomization.yaml service/ingresses.yaml service/services.yaml workloads/deployments/${APPNAME}.yaml
+  do
+    eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" ${TEMPLATE_PATH}/${FILE}
+  done
 }
 
 function dockerfile() {
@@ -473,7 +475,7 @@ replicas:
 resources:
 - service/ingresses.yaml
 - service/services.yaml
-- workloads/deployment.yaml
+- workloads/deployments/_APPNAME_.yaml
 
 images:
 - name: _CI_REGISTRY_IMAGE_
@@ -533,7 +535,8 @@ spec:
 	})
 
 	t.files = append(t.files, &templateFile{
-		name:  "scripts/templates/kubernetes/workloads/deployment.yaml",
+		name: fmt.Sprintf("scripts/templates/kubernetes/workloads/deployments/%v-%v-%v.yaml",
+			t.config.Global.ProductCode, t.config.Global.ShortName, t.config.Template.Service.APIVersion),
 		parse: true,
 		body: `
 ---
