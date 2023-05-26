@@ -291,7 +291,6 @@ pipeline {
         container('kaniko') {
           sh '''
              cd source
-             cd source
              ./scripts/kaniko.sh
           '''
         }
