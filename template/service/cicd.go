@@ -176,24 +176,19 @@ pipeline {
   parameters {
     booleanParam(name: 'CI_BIZ_CODE_BUILD', defaultValue: true, description: '是否构建镜像，取消则直接至 k8s yaml 更新')
     booleanParam(name: 'CI_PIPELINE_SILENCE', defaultValue: false, description: '执行流水线全程静默无需二次确认')
-    // TODO;
     choice(name: 'CI_REGISTRY_HOSTNAME', choices: ['ccr.ccs.tencentyun.com'], description: '支持的镜像中心列表')
-    // TODO;
     choice(name: 'CI_REGISTRY_NAMESPACE', choices: ['opsaid'], description: '支持的镜像中心列表')
-    // TODO;
-    string(name: 'CI_BIZ_REPO_URL', defaultValue: 'https://{{ .Global.Repository }}.git', description: '业务源代码仓库')
-    // TODO;
-    string(name: 'CI_OPS_REPO_URL', defaultValue: 'https://{{ .Global.Repository }}.git', description: '运维源代码仓库')
-    // TODO;
-    string(name: 'CI_BIZ_BRANCH_NAME', defaultValue: 'main', description: '业务源代码仓库拉取的分支')
-    // TODO;
-    credentials(name: 'CI_BIZ_REPO_AUTH', defaultValue: '2a60ed63-1f38-4b18-a820-60cce23aa32e', credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', required: false)
-    // TODO;
-    credentials(name: 'CI_OPS_REPO_AUTH', defaultValue: '2a60ed63-1f38-4b18-a820-60cce23aa32e', credentialType: 'com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl', required: false)
   }
 
   environment {
     GOPROXY = "https://goproxy.cn"
+    CI_BIZ_BRANCH_NAME = "main"
+    CI_BIZ_GROUP_APPID = "uptime"
+    CI_BIZ_REPO_URL = "https://{{ .Global.Repository }}.git"
+    CI_OPS_REPO_URL = "https://{{ .Global.Repository }}.git"
+    CI_BIZ_REPO_AUTH = "biz-group-appid-${CI_BIZ_GROUP_APPID}"
+    CI_OPS_REPO_AUTH  = "biz-group-appid-${CI_BIZ_GROUP_APPID}"
+    KUBERNETES_YAML_DIR = "deploy/kubernetes/dev/"
   }
 
   options {
@@ -205,31 +200,23 @@ pipeline {
   stages {
     stage('Prepare') {
       when {
-        allOf {
-          not {
-            environment name: 'CI_BIZ_REPO_URL', value: ''
-          }
-          not {
-            environment name: 'CI_BIZ_BRANCH_NAME', value: ''
-          }
-          environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
-        }
+        environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
       }
 
       steps {
         checkout scmGit(
-            branches: [
-                [name: CI_BIZ_BRANCH_NAME]
-            ],
-            extensions: [
-                [$class: 'RelativeTargetDirectory', relativeTargetDir: 'source']
-            ],
-            userRemoteConfigs: [
-                [
-                    credentialsId: CI_BIZ_REPO_AUTH,
-                    url: CI_BIZ_REPO_URL
-                ]
+          branches: [
+            [name: CI_BIZ_BRANCH_NAME]
+          ],
+          extensions: [
+            [$class: 'RelativeTargetDirectory', relativeTargetDir: 'source']
+          ],
+          userRemoteConfigs: [
+            [
+              credentialsId: CI_BIZ_REPO_AUTH,
+              url: CI_BIZ_REPO_URL
             ]
+          ]
         )
 
         // 执行代码检查
@@ -243,15 +230,7 @@ pipeline {
 
     stage('Test') {
       when {
-        allOf {
-          not {
-            environment name: 'CI_BIZ_REPO_URL', value: ''
-          }
-          not {
-            environment name: 'CI_BIZ_BRANCH_NAME', value: ''
-          }
-          environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
-        }
+        environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
       }
 
       steps {
@@ -265,15 +244,7 @@ pipeline {
 
     stage('Build') {
       when {
-        allOf {
-          not {
-            environment name: 'CI_BIZ_REPO_URL', value: ''
-          }
-          not {
-            environment name: 'CI_BIZ_BRANCH_NAME', value: ''
-          }
-          environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
-        }
+        environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
       }
 
       steps {
@@ -283,7 +254,7 @@ pipeline {
              cd source
              make build
              make manifests TEMPLATES=dockerfile
-             make manifests TEMPLATES=kubernetes TEMPLATE_PATH=../gitops/deploy/kubernetes/dev/
+             make manifests TEMPLATES=kubernetes TEMPLATE_PATH=../gitops/${KUBERNETES_YAML_DIR}
           '''
         }
 
@@ -305,52 +276,29 @@ pipeline {
       steps {
         container('kcli') {
           sh '''
-            cd gitops/deploy/kubernetes/dev
+            cd gitops/${KUBERNETES_YAML_DIR}
             cat kustomization.yaml
           '''
         }
 
-        // 人工审批确认，是否部署至环境
-        input "Does look ok?"
+        input "请查看配置，确认是否可以部署？"
       }
     }
 
     stage('Production') {
       steps {
         container('kcli') {
-
           withCredentials([gitUsernamePassword(credentialsId: CI_OPS_REPO_AUTH, gitToolName: 'git-tool')]) {
             wrap([$class: 'BuildUser']) {
-              script {
-                if (env.CI_BIZ_CODE_BUILD == "true" ) {
-                  sh '''
-                     cd source
-                     RELEASE_VERSION=$(cat VERSION)
-                     IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
-                     cd ../
-
-                     cd gitops/deploy/kubernetes/dev
-                     /bin/kustomize edit set image ${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${JOB_BASE_NAME}:${IMAGE_VERSION}
-
-                     # fix: https://github.blog/2022-04-12-git-security-vulnerability-announced/
-                     git config --global --add safe.directory ${WORKSPACE}/gitops
-
-                     git config user.name ${BUILD_USER}
-                     git config user.email ${BUILD_USER_EMAIL}
-
-                     git add kustomization.yaml
-                     git commit -m "build: set image ${JOB_BASE_NAME}:${IMAGE_VERSION}"
-
-                     git remote add gitops ${CI_OPS_REPO_URL}
-                     git push gitops HEAD:refs/heads/main
-                  '''
-                }
-              }
+              sh '''
+                 cd gitops/
+                 ./scripts/kcli.sh git-commit
+              '''
             }
 
             sh '''
-               cd gitops/deploy/kubernetes/dev
-               /bin/kustomize build | /bin/kubectl apply -f -
+               cd gitops/
+               ./scripts/kcli.sh kubectl-apply
             '''
           }
         }

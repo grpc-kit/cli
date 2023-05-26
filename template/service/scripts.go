@@ -289,8 +289,8 @@ fi
 if test -z "${DEPLOY_ENV}"; then
   DEPLOY_ENV=dev
 fi
-if test -n "${BIZ_GROUP_APPID}"; then
-  KUBERNETES_NAMESPACE=biz-${DEPLOY_ENV}-${BIZ_GROUP_APPID}
+if test -n "${CI_BIZ_GROUP_APPID}"; then
+  KUBERNETES_NAMESPACE=biz-${DEPLOY_ENV}-${CI_BIZ_GROUP_APPID}
 fi
 
 function clean() {
@@ -741,4 +741,61 @@ build
 `,
 	})
 
+	t.files = append(t.files, &templateFile{
+		name: "scripts/kcli.sh",
+		body: `
+#!/bin/bash
+
+source scripts/env
+
+# 生成的镜像地址
+RELEASE_VERSION=$(cat VERSION)
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  if test -z "${BUILD_ID}"; then
+    DOCKER_IMAGE_VERSION=latest
+  else
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+  fi
+fi
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  if test -z "${CI_REGISTRY_HOSTNAME}"; then
+    CI_REGISTRY_HOSTNAME="docker.io"
+  fi
+  if test -z "${CI_REGISTRY_NAMESPACE}"; then
+    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
+  fi
+  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
+fi
+
+# 当前目录必须为 gitops 仓库根路径
+function git-commit() {
+  if test "${CI_BIZ_CODE_BUILD}" != "true"; then
+    return
+  fi
+
+  # fix: https://github.blog/2022-04-12-git-security-vulnerability-announced/
+  git config --global --add safe.directory $(pwd)
+
+  cd ${KUBERNETES_YAML_DIR}
+  /bin/kustomize edit set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}
+
+  git config user.name ${BUILD_USER}
+  git config user.email ${BUILD_USER_EMAIL}
+
+  git add kustomization.yaml
+  git commit -m "build: set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}"
+
+  git remote add gitops ${CI_OPS_REPO_URL}
+  git push gitops HEAD:refs/heads/main
+}
+
+# 当前目录必须为 gitops 仓库根路径
+function kubectl-apply() {
+  cd ${KUBERNETES_YAML_DIR}
+  /bin/kustomize build | /bin/kubectl apply -f -
+}
+
+$1
+`,
+	})
 }
