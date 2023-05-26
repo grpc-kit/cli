@@ -14,8 +14,6 @@
 
 package service
 
-import "fmt"
-
 func (t *templateService) fileDirectoryScripts() {
 	t.files = append(t.files, &templateFile{
 		name:  "scripts/env",
@@ -352,6 +350,7 @@ function kubernetes() {
   fi
 
   cp -rf scripts/templates/kubernetes/* ${TEMPLATE_PATH}
+  mv ${TEMPLATE_PATH}/workloads/deployments/microservice.yaml ${TEMPLATE_PATH}/workloads/deployments/${APPNAME}.yaml
 
   if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
     cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml ${TEMPLATE_PATH}/config/configmap/app.yaml
@@ -455,21 +454,21 @@ kind: Kustomization
 namespace: _KUBERNETES_NAMESPACE_
 
 commonLabels:
-  {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  {{ .Global.APIEndpoint }}/appname: _APPNAME_
   {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
 
 commonAnnotations:
   {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
 
 configMapGenerator:
-- name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+- name: _APPNAME_
   files:
   - app.yaml=config/configmap/app.yaml
   options:
     disableNameSuffixHash: true
 
 replicas:
-- name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+- name: _APPNAME_
   count: 1
 
 resources:
@@ -493,17 +492,17 @@ kind: Ingress
 metadata:
   #annotations:
   #  nginx.ingress.kubernetes.io/proxy-body-size: 10m
-  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  name: _APPNAME_
 spec:
   ingressClassName: nginx
   rules:
-  - host: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}._KUBERNETES_NAMESPACE_.{{ .Global.APIEndpoint }}
+  - host: _APPNAME_._KUBERNETES_NAMESPACE_.{{ .Global.APIEndpoint }}
     http:
       paths:
       - path: /
         backend:
           service:
-            name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+            name: _APPNAME_
             port:
               number: 10080
         pathType: Prefix
@@ -518,7 +517,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  name: _APPNAME_
 spec:
   ports:
   - name: http
@@ -535,15 +534,14 @@ spec:
 	})
 
 	t.files = append(t.files, &templateFile{
-		name: fmt.Sprintf("scripts/templates/kubernetes/workloads/deployments/%v-%v-%v.yaml",
-			t.config.Global.ProductCode, t.config.Global.ShortName, t.config.Template.Service.APIVersion),
+		name:  "scripts/templates/kubernetes/workloads/deployments/microservice.yaml",
 		parse: true,
 		body: `
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  name: _APPNAME_
 spec:
   revisionHistoryLimit: 3
   strategy:
@@ -558,7 +556,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+                {{ .Global.APIEndpoint }}/appname: _APPNAME_
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -581,11 +579,11 @@ spec:
           tcpSocket:
             port: 10081
           timeoutSeconds: 5
-        name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+        name: _APPNAME_
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /healthz?service={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
+            path: /healthz?service=_SERVICE_CODE_
             port: 10080
             scheme: HTTP
           initialDelaySeconds: 15
@@ -626,7 +624,7 @@ spec:
       - name: config-volume
         configMap:
           defaultMode: 420
-          name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+          name: _APPNAME_
       - name: applog-volume
         emptyDir: {}
 `,
