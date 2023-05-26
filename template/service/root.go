@@ -153,7 +153,7 @@ precheck: ## Check environment.
 
 .PHONY: generate
 manifests: ## Generate deployment manifests files.
-	@./scripts/manifests.sh ${TEMPLATES}
+	@./scripts/manifests.sh
 
 generate: precheck ## Generate code from proto files.
 	@echo ">> generation release version"

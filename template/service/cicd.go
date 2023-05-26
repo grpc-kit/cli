@@ -282,6 +282,8 @@ pipeline {
           sh '''
              cd source
              make build
+             make manifests TEMPLATES=dockerfile
+             make manifests TEMPLATES=kubernetes TEMPLATE_PATH=../gitops/deploy/kubernetes/dev/
           '''
         }
 
@@ -289,12 +291,8 @@ pipeline {
         container('kaniko') {
           sh '''
              cd source
-
-             RELEASE_VERSION=$(cat VERSION)
-             IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
-
-             cp ../gitops/Dockerfile ./
-             /kaniko/executor --dockerfile ./Dockerfile --context ./ --destination ${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${JOB_BASE_NAME}:${IMAGE_VERSION} --log-format text --log-timestamp
+             cd source
+             ./scripts/kaniko.sh
           '''
         }
       }

@@ -40,6 +40,12 @@ APPNAME=${PRODUCT_CODE}-${SHORT_NAME}-${API_VERSION}
 
 # 服务代码：用于 grpc 服务之间调用
 SERVICE_CODE=${SHORT_NAME}.${API_VERSION}.${PRODUCT_CODE}
+
+# 镜像名称：用于构建生成的镜像名称
+#CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
+
+# 镜像版本：用于构建生成的镜像版本
+#DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
 `,
 	})
 
@@ -56,12 +62,23 @@ if test -z $1; then
   echo "\t ./scripts/docker.sh push"
 fi
 
-# 生成的容器镜像地址
-if test -z "${CI_REGISTRY_IMAGE}"; then
-  CI_REGISTRY_IMAGE=docker.io/${PRODUCT_CODE}/${SHORT_NAME}
-fi
+# 生成的镜像地址
+RELEASE_VERSION=$(cat VERSION)
 if test -z "${DOCKER_IMAGE_VERSION}"; then
-  DOCKER_IMAGE_VERSION=latest
+  if test -z "${BUILD_ID}"; then
+    DOCKER_IMAGE_VERSION=latest
+  else
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+  fi
+fi
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  if test -z "${CI_REGISTRY_HOSTNAME}"; then
+    CI_REGISTRY_HOSTNAME="docker.io"
+  fi
+  if test -z "${CI_REGISTRY_NAMESPACE}"; then
+    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
+  fi
+  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
 fi
 
 function build() {
@@ -231,7 +248,7 @@ $1
 
 source scripts/env
 
-TEMPLATES=$1
+# 需生成的模版类型
 if test -z "${TEMPLATES}"; then
   TEMPLATES=dockerfile
 fi
@@ -239,19 +256,30 @@ fi
 GOHOSTOS=$(go env GOHOSTOS)
 KUBERNETES_NAMESPACE=default
 
+# 生成的镜像地址
+RELEASE_VERSION=$(cat VERSION)
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  if test -z "${BUILD_ID}"; then
+    DOCKER_IMAGE_VERSION=latest
+  else
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+  fi
+fi
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  if test -z "${CI_REGISTRY_HOSTNAME}"; then
+    CI_REGISTRY_HOSTNAME="docker.io"
+  fi
+  if test -z "${CI_REGISTRY_NAMESPACE}"; then
+    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
+  fi
+  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
+fi
+
 # 解决 linux 与 darwin 的 sed 存在的差异
 if test ${GOHOSTOS} = "darwin"; then
   SED="sed -i ''"
 else
   SED="sed -i"
-fi
-
-# 生成的镜像地址
-if test -z "${CI_REGISTRY_IMAGE}"; then
-  CI_REGISTRY_IMAGE=docker.io/${PRODUCT_CODE}/${SHORT_NAME}
-fi
-if test -z "${DOCKER_IMAGE_VERSION}"; then
-  DOCKER_IMAGE_VERSION=latest
 fi
 
 # 编译与部署环境
@@ -273,44 +301,68 @@ function clean() {
 }
 
 function systemd() {
-  mkdir -p deploy/systemd/
-  cp -rf scripts/templates/systemd/microservice.service deploy/systemd/${APPNAME}.service
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)/deploy/systemd
+  fi
 
-  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_APPNAME_#${APPNAME}#g" deploy/systemd/${APPNAME}.service
+  if test ! -d "${TEMPLATE_PATH}"; then
+    mkdir -p ${TEMPLATE_PATH}
+  fi
+
+  cp -rf scripts/templates/systemd/microservice.service ${TEMPLATE_PATH}/${APPNAME}.service
+
+  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${APPNAME}.service
 }
 
 function supervisor() {
-  mkdir -p deploy/supervisor/
-  cp -rf scripts/templates/supervisor/microservice.conf deploy/supervisor/${APPNAME}.conf
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)/deploy/supervisor
+  fi
 
-  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_APPNAME_#${APPNAME}#g" deploy/supervisor/${APPNAME}.conf
+  if test ! -d "${TEMPLATE_PATH}"; then
+    mkdir -p ${TEMPLATE_PATH}
+  fi
+
+  cp -rf scripts/templates/supervisor/microservice.conf ${TEMPLATE_PATH}/${APPNAME}.conf
+
+  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
 }
 
 function kubernetes() {
-  mkdir -p deploy/kubernetes/${DEPLOY_ENV}/
-  mkdir -p deploy/kubernetes/${DEPLOY_ENV}/config/configmap/
-  cp -rf scripts/templates/kubernetes/* deploy/kubernetes/${DEPLOY_ENV}/
-
-  if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
-    cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml deploy/kubernetes/${DEPLOY_ENV}/config/configmap/app.yaml
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)/deploy/kubernetes/${DEPLOY_ENV}
   fi
 
-  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-  eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  if test ! -d "${TEMPLATE_PATH}"; then
+    mkdir -p ${TEMPLATE_PATH}
+    mkdir -p ${TEMPLATE_PATH}/config/configmap
+  fi
+
+  cp -rf scripts/templates/kubernetes/* ${TEMPLATE_PATH}
+
+  if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
+    cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml ${TEMPLATE_PATH}/config/configmap/app.yaml
+  fi
+
+  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/kustomization.yaml
+  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/kustomization.yaml
+  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/workloads/deployment.yaml
+  eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/service/ingresses.yaml
+  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/service/ingresses.yaml
+  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/kustomization.yaml
+  eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/workloads/deployment.yaml
+  eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" ${TEMPLATE_PATH}/kustomization.yaml
 }
 
 function dockerfile() {
@@ -319,14 +371,17 @@ function dockerfile() {
     DOCKER_IMAGE_FROM=scratch
   fi
 
-  cp scripts/templates/Dockerfile ./
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)
+  fi
 
-  GOHOSTOS=$(go env GOHOSTOS)
+  cp scripts/templates/Dockerfile ${TEMPLATE_PATH}
 
   if test ${GOHOSTOS} = "darwin"; then
-    sed -i "" "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
+    sed -i "" "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" ${TEMPLATE_PATH}/Dockerfile
   else
-    sed -i "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" Dockerfile
+    sed -i "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" ${TEMPLATE_PATH}/Dockerfile
   fi
 }
 
@@ -647,6 +702,42 @@ else
   $1
   echo "download complete, this will place binaries in your \$GOBIN, make sure that your \$GOBIN is in your \$PATH."
 fi
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/kaniko.sh",
+		body: `
+#!/bin/sh
+
+source scripts/env
+
+# TODO; kaniko 镜像仅支持 /bin/sh 解析器
+
+# 生成的镜像地址
+RELEASE_VERSION=$(cat VERSION)
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  if test -z "${BUILD_ID}"; then
+    DOCKER_IMAGE_VERSION=latest
+  else
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+  fi
+fi
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  if test -z "${CI_REGISTRY_HOSTNAME}"; then
+    CI_REGISTRY_HOSTNAME="docker.io"
+  fi
+  if test -z "${CI_REGISTRY_NAMESPACE}"; then
+    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
+  fi
+  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
+fi
+
+function build() {
+  /kaniko/executor --dockerfile ./Dockerfile --context ./ --destination ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION} --log-format text --log-timestamp
+}
+
+build
 `,
 	})
 
