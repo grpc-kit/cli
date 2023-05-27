@@ -54,31 +54,16 @@ SERVICE_CODE=${SHORT_NAME}.${API_VERSION}.${PRODUCT_CODE}
 		body: `
 #!/bin/bash
 
+# 引入全局静态变量
 source scripts/env
+
+# 引入全局动态变量
+source scripts/variable.sh
 
 if test -z $1; then
   echo "Usage:"
   echo "\t ./scripts/docker.sh build"
   echo "\t ./scripts/docker.sh push"
-fi
-
-# 生成的镜像地址
-RELEASE_VERSION=$(cat VERSION)
-if test -z "${DOCKER_IMAGE_VERSION}"; then
-  if test -z "${BUILD_ID}"; then
-    DOCKER_IMAGE_VERSION=latest
-  else
-    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
-  fi
-fi
-if test -z "${CI_REGISTRY_IMAGE}"; then
-  if test -z "${CI_REGISTRY_HOSTNAME}"; then
-    CI_REGISTRY_HOSTNAME="docker.io"
-  fi
-  if test -z "${CI_REGISTRY_NAMESPACE}"; then
-    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
-  fi
-  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
 fi
 
 function build() {
@@ -246,7 +231,11 @@ $1
 		body: `
 #!/bin/bash
 
+# 引入全局静态变量
 source scripts/env
+
+# 引入全局动态变量
+source scripts/variable.sh
 
 # 需生成的模版类型
 if test -z "${TEMPLATES}"; then
@@ -255,25 +244,6 @@ fi
 
 GOHOSTOS=$(go env GOHOSTOS)
 KUBERNETES_NAMESPACE=default
-
-# 生成的镜像地址
-RELEASE_VERSION=$(cat VERSION)
-if test -z "${DOCKER_IMAGE_VERSION}"; then
-  if test -z "${BUILD_ID}"; then
-    DOCKER_IMAGE_VERSION=latest
-  else
-    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
-  fi
-fi
-if test -z "${CI_REGISTRY_IMAGE}"; then
-  if test -z "${CI_REGISTRY_HOSTNAME}"; then
-    CI_REGISTRY_HOSTNAME="docker.io"
-  fi
-  if test -z "${CI_REGISTRY_NAMESPACE}"; then
-    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
-  fi
-  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
-fi
 
 # 解决 linux 与 darwin 的 sed 存在的差异
 if test ${GOHOSTOS} = "darwin"; then
@@ -723,28 +693,13 @@ fi
 		body: `
 #!/bin/sh
 
-source scripts/env
-
 # TODO; kaniko 镜像仅支持 /bin/sh 解析器
 
-# 生成的镜像地址
-RELEASE_VERSION=$(cat VERSION)
-if test -z "${DOCKER_IMAGE_VERSION}"; then
-  if test -z "${BUILD_ID}"; then
-    DOCKER_IMAGE_VERSION=latest
-  else
-    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
-  fi
-fi
-if test -z "${CI_REGISTRY_IMAGE}"; then
-  if test -z "${CI_REGISTRY_HOSTNAME}"; then
-    CI_REGISTRY_HOSTNAME="docker.io"
-  fi
-  if test -z "${CI_REGISTRY_NAMESPACE}"; then
-    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
-  fi
-  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
-fi
+# 引入全局静态变量
+source scripts/env
+
+# 引入全局动态变量
+source scripts/variable.sh
 
 function build() {
   /kaniko/executor --dockerfile ./Dockerfile --context ./ --destination ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION} --log-format text --log-timestamp
@@ -759,29 +714,15 @@ build
 		body: `
 #!/bin/bash
 
+# 引入全局静态变量
 source scripts/env
 
-# 生成的镜像地址
-RELEASE_VERSION=$(cat VERSION)
-if test -z "${DOCKER_IMAGE_VERSION}"; then
-  if test -z "${BUILD_ID}"; then
-    DOCKER_IMAGE_VERSION=latest
-  else
-    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
-  fi
-fi
-if test -z "${CI_REGISTRY_IMAGE}"; then
-  if test -z "${CI_REGISTRY_HOSTNAME}"; then
-    CI_REGISTRY_HOSTNAME="docker.io"
-  fi
-  if test -z "${CI_REGISTRY_NAMESPACE}"; then
-    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
-  fi
-  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
-fi
+# 引入全局动态变量
+source scripts/variable.sh
 
 # 当前目录必须为 gitops 仓库根路径
 function git-commit() {
+  # 变量 CI_BIZ_CODE_BUILD 来自 CICD 系统
   if test "${CI_BIZ_CODE_BUILD}" != "true"; then
     return
   fi
@@ -798,6 +739,7 @@ function git-commit() {
   git add *
   git commit -m "build: set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}"
 
+  # 变量 CI_OPS_REPO_URL 来自 CICD 系统
   git remote add gitops ${CI_OPS_REPO_URL}
   git push gitops HEAD:refs/heads/main
 }
@@ -809,6 +751,59 @@ function kubectl-apply() {
 }
 
 $1
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/variable.sh",
+		body: `
+#!/bin/bash
+
+# 生成的镜像相关
+# DOCKER_IMAGE_FROM=scratch
+RELEASE_VERSION=$(cat VERSION)
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  if test -z "${BUILD_ID}"; then
+    DOCKER_IMAGE_VERSION=latest
+  else
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+  fi
+fi
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  if test -z "${CI_REGISTRY_HOSTNAME}"; then
+    CI_REGISTRY_HOSTNAME="docker.io"
+  fi
+  if test -z "${CI_REGISTRY_NAMESPACE}"; then
+    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
+  fi
+  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
+fi
+
+# Kubernetes 相关变量
+# KUBERNETES_YAML_DIRECTORY
+
+# 构建相关用户
+if test -z "${BUILD_USER}"; then
+  BUILD_USER=${USER}
+fi
+if test -z "${BUILD_USER_EMAIL}"; then
+  BUILD_USER_EMAIL=${BUILD_USER}@$(hostname)
+fi
+
+# 部署编译环境相关
+if test -z "${BUILD_ENV}"; then
+  BUILD_ENV=local
+fi
+if test -z "${DEPLOY_ENV}"; then
+  DEPLOY_ENV=dev
+fi
+
+# CI_BIZ_GROUP_APPID
+
+# 如果存在以下各对应环境的文件，则覆盖以上所设置的同名变量
+if test -f "scripts/env-${DEPLOY_ENV}-${BUILD_ENV}"; then
+  source scripts/env-${DEPLOY_ENV}-${BUILD_ENV}
+fi
 `,
 	})
 }
