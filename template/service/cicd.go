@@ -177,18 +177,23 @@ pipeline {
     booleanParam(name: 'CI_BIZ_CODE_BUILD', defaultValue: true, description: '是否构建镜像，取消则直接至 k8s yaml 更新')
     booleanParam(name: 'CI_PIPELINE_SILENCE', defaultValue: false, description: '执行流水线全程静默无需二次确认')
     choice(name: 'CI_REGISTRY_HOSTNAME', choices: ['ccr.ccs.tencentyun.com'], description: '支持的镜像中心列表')
-    choice(name: 'CI_REGISTRY_NAMESPACE', choices: ['opsaid'], description: '支持的镜像中心列表')
+    choice(name: 'CI_REGISTRY_NAMESPACE', choices: ['{{ .Global.ProductCode }}'], description: '支持的镜像中心列表')
+    choice(name: 'DEPLOY_ENV', choices: ['dev', 'test', 'staging', 'prod'], description: '应用部署到具体的环境')
   }
 
   environment {
     GOPROXY = "https://goproxy.cn"
     CI_BIZ_BRANCH_NAME = "main"
-    CI_BIZ_GROUP_APPID = "uptime"
+    CI_BIZ_GROUP_APPID = "{{ .Global.ProductCode }}"
     CI_BIZ_REPO_URL = "https://{{ .Global.Repository }}.git"
     CI_OPS_REPO_URL = "https://{{ .Global.Repository }}.git"
     CI_BIZ_REPO_AUTH = "biz-group-appid-${CI_BIZ_GROUP_APPID}"
     CI_OPS_REPO_AUTH  = "biz-group-appid-${CI_BIZ_GROUP_APPID}"
-    KUBERNETES_YAML_DIR = "deploy/kubernetes/dev/"
+    KUBERNETES_LABEL_PREFIX = "{{ .Global.APIEndpoint }}"
+    KUBERNETES_NAMESPACE = "biz-${DEPLOY_ENV}-${CI_BIZ_GROUP_APPID}"
+    KUBERNETES_PM2_UUID = "00000000-0000-0000-0000-000000000000"
+    KUBERNETES_YAML_DIRECTORY = "deploy/kubernetes/${DEPLOY_ENV}/"
+    KUBERNETES_CLUSTER_DOMAIN = "{{ .Global.APIEndpoint }}"
   }
 
   options {
@@ -254,7 +259,7 @@ pipeline {
              cd source
              make build
              make manifests TEMPLATES=dockerfile
-             make manifests TEMPLATES=kubernetes TEMPLATE_PATH=../gitops/${KUBERNETES_YAML_DIR}
+             make manifests TEMPLATES=kubernetes TEMPLATE_PATH=../gitops/${KUBERNETES_YAML_DIRECTORY}
           '''
         }
 
@@ -276,7 +281,7 @@ pipeline {
       steps {
         container('kcli') {
           sh '''
-            cd gitops/${KUBERNETES_YAML_DIR}
+            cd gitops/${KUBERNETES_YAML_DIRECTORY}
             cat kustomization.yaml
           '''
         }

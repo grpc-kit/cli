@@ -346,7 +346,6 @@ function kubernetes() {
 
   if test ! -d "${TEMPLATE_PATH}"; then
     mkdir -p ${TEMPLATE_PATH}
-    mkdir -p ${TEMPLATE_PATH}/config/configmap
   fi
 
   cp -rf scripts/templates/kubernetes/* ${TEMPLATE_PATH}
@@ -360,9 +359,12 @@ function kubernetes() {
   do
     eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/${FILE}
     eval "${SED}" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${FILE}
-    eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/${FILE}
     eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/${FILE}
     eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_LABEL_PREFIX_#${KUBERNETES_LABEL_PREFIX}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_PM2_UUID_#${KUBERNETES_PM2_UUID}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_CLUSTER_DOMAIN_#${KUBERNETES_CLUSTER_DOMAIN}#g" ${TEMPLATE_PATH}/${FILE}
   done
 }
 
@@ -454,11 +456,11 @@ kind: Kustomization
 namespace: _KUBERNETES_NAMESPACE_
 
 commonLabels:
-  {{ .Global.APIEndpoint }}/appname: _APPNAME_
-  {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
+  _KUBERNETES_LABEL_PREFIX_/appname: _APPNAME_
+  _KUBERNETES_LABEL_PREFIX_/pm2-uuid: _KUBERNETES_PM2_UUID_
 
 commonAnnotations:
-  {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
+  _KUBERNETES_LABEL_PREFIX_/pm2-uuid: _KUBERNETES_PM2_UUID_
 
 configMapGenerator:
 - name: _APPNAME_
@@ -483,6 +485,16 @@ images:
 	})
 
 	t.files = append(t.files, &templateFile{
+		name:  "scripts/templates/kubernetes/config/configmap/app.yaml",
+		parse: true,
+		body: `
+# https://github.com/grpc-kit/pkg/blob/main/cfg/app-sample.yaml
+
+# 由于安全问题，默认配置不会被存放至 git 仓库，请自行添加。
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
 		name:  "scripts/templates/kubernetes/service/ingresses.yaml",
 		parse: true,
 		body: `
@@ -496,7 +508,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: _APPNAME_._KUBERNETES_NAMESPACE_.{{ .Global.APIEndpoint }}
+  - host: _APPNAME_._KUBERNETES_NAMESPACE_._KUBERNETES_CLUSTER_DOMAIN_
     http:
       paths:
       - path: /
@@ -556,7 +568,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                {{ .Global.APIEndpoint }}/appname: _APPNAME_
+                _KUBERNETES_LABEL_PREFIX_/appname: _APPNAME_
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -777,13 +789,13 @@ function git-commit() {
   # fix: https://github.blog/2022-04-12-git-security-vulnerability-announced/
   git config --global --add safe.directory $(pwd)
 
-  cd ${KUBERNETES_YAML_DIR}
+  cd ${KUBERNETES_YAML_DIRECTORY}
   /bin/kustomize edit set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}
 
   git config user.name ${BUILD_USER}
   git config user.email ${BUILD_USER_EMAIL}
 
-  git add kustomization.yaml
+  git add *
   git commit -m "build: set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}"
 
   git remote add gitops ${CI_OPS_REPO_URL}
@@ -792,7 +804,7 @@ function git-commit() {
 
 # 当前目录必须为 gitops 仓库根路径
 function kubectl-apply() {
-  cd ${KUBERNETES_YAML_DIR}
+  cd ${KUBERNETES_YAML_DIRECTORY}
   /bin/kustomize build | /bin/kubectl apply -f -
 }
 
