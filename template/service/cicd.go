@@ -182,6 +182,7 @@ pipeline {
   }
 
   environment {
+    BUILD_ENV = "remote"
     GOPROXY = "https://goproxy.cn"
     CI_BIZ_BRANCH_NAME = "main"
     CI_BIZ_GROUP_APPID = "{{ .Global.ProductCode }}"
@@ -297,13 +298,13 @@ pipeline {
             wrap([$class: 'BuildUser']) {
               sh '''
                  cd gitops/
-                 ./scripts/kcli.sh git-commit
+                 ./scripts/kcli.sh commit
               '''
             }
 
             sh '''
                cd gitops/
-               ./scripts/kcli.sh kubectl-apply
+               ./scripts/kcli.sh apply
             '''
           }
         }

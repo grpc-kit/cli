@@ -40,12 +40,6 @@ APPNAME=${PRODUCT_CODE}-${SHORT_NAME}-${API_VERSION}
 
 # 服务代码：用于 grpc 服务之间调用
 SERVICE_CODE=${SHORT_NAME}.${API_VERSION}.${PRODUCT_CODE}
-
-# 镜像名称：用于构建生成的镜像名称
-#CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
-
-# 镜像版本：用于构建生成的镜像版本
-#DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
 `,
 	})
 
@@ -243,7 +237,6 @@ if test -z "${TEMPLATES}"; then
 fi
 
 GOHOSTOS=$(go env GOHOSTOS)
-KUBERNETES_NAMESPACE=default
 
 # 解决 linux 与 darwin 的 sed 存在的差异
 if test ${GOHOSTOS} = "darwin"; then
@@ -259,8 +252,10 @@ fi
 if test -z "${DEPLOY_ENV}"; then
   DEPLOY_ENV=dev
 fi
-if test -n "${CI_BIZ_GROUP_APPID}"; then
-  KUBERNETES_NAMESPACE=biz-${DEPLOY_ENV}-${CI_BIZ_GROUP_APPID}
+if test -z "${KUBERNETES_NAMESPACE}"; then
+  if test -n "${CI_BIZ_GROUP_APPID}"; then
+    KUBERNETES_NAMESPACE=biz-${DEPLOY_ENV}-${CI_BIZ_GROUP_APPID}
+  fi
 fi
 
 function clean() {
@@ -327,7 +322,6 @@ function kubernetes() {
 
   for FILE in kustomization.yaml service/ingresses.yaml service/services.yaml workloads/deployments/${APPNAME}.yaml
   do
-    eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" ${TEMPLATE_PATH}/${FILE}
     eval "${SED}" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${FILE}
     eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/${FILE}
     eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" ${TEMPLATE_PATH}/${FILE}
@@ -721,7 +715,7 @@ source scripts/env
 source scripts/variable.sh
 
 # 当前目录必须为 gitops 仓库根路径
-function git-commit() {
+function commit() {
   # 变量 CI_BIZ_CODE_BUILD 来自 CICD 系统
   if test "${CI_BIZ_CODE_BUILD}" != "true"; then
     return
@@ -745,7 +739,7 @@ function git-commit() {
 }
 
 # 当前目录必须为 gitops 仓库根路径
-function kubectl-apply() {
+function apply() {
   cd ${KUBERNETES_YAML_DIRECTORY}
   /bin/kustomize build | /bin/kubectl apply -f -
 }
@@ -780,9 +774,11 @@ if test -z "${CI_REGISTRY_IMAGE}"; then
 fi
 
 # Kubernetes 相关变量
-# KUBERNETES_YAML_DIRECTORY
+if test -z "${KUBERNETES_NAMESPACE}"; then
+  KUBERNETES_NAMESPACE=default
+fi
 
-# 构建相关用户
+# 启用构建相关的用户
 if test -z "${BUILD_USER}"; then
   BUILD_USER=${USER}
 fi
@@ -791,19 +787,52 @@ if test -z "${BUILD_USER_EMAIL}"; then
 fi
 
 # 部署编译环境相关
-if test -z "${BUILD_ENV}"; then
-  BUILD_ENV=local
-fi
 if test -z "${DEPLOY_ENV}"; then
   DEPLOY_ENV=dev
 fi
+if test -z "${BUILD_ENV}"; then
+  BUILD_ENV=local
+fi
 
-# CI_BIZ_GROUP_APPID
+if test -z "${CI_BIZ_GROUP_APPID}"; then
+  CI_BIZ_GROUP_APPID = ${PRODUCT_CODE}
+fi
 
 # 如果存在以下各对应环境的文件，则覆盖以上所设置的同名变量
 if test -f "scripts/env-${DEPLOY_ENV}-${BUILD_ENV}"; then
   source scripts/env-${DEPLOY_ENV}-${BUILD_ENV}
 fi
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/env-dev-local",
+		body: `
+# 如果开启以下环境变量，则覆盖所有 CI 系统中设置的同名值
+
+# 业务线代号：用于获取 git 授权、k8s 空间的关联
+#CI_BIZ_GROUP_APPID=uptime
+
+# 镜像名称：用于构建生成的镜像名称
+#CI_REGISTRY_IMAGE=docker.io/opsaid/test9
+
+# 镜像版本：用于构建生成的镜像版本
+#DOCKER_IMAGE_VERSION=0.1.0
+
+# K8S 标签前缀
+#KUBERNETES_LABEL_PREFIX=
+
+# 部署在 K8S 命名空间
+#KUBERNETES_NAMESPACE=
+
+# K8S 资源关联计费项目ID
+#KUBERNETES_PM2_UUID=
+
+# 生成 K8S YAML 模版地址
+#KUBERNETES_YAML_DIRECTORY=
+
+# 生成 K8S ingress 默认域名后缀
+#KUBERNETES_CLUSTER_DOMAIN=
 `,
 	})
 }
