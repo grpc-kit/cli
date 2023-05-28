@@ -136,17 +136,6 @@ BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/vars.Appname={{ .Global.ProductC
                 -X 'github.com/grpc-kit/pkg/vars.CommitUnixTime=${COMMIT_DATE}' \
                 -X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
 
-# 构建Docker容器变量
-BUILD_GOOS      ?= $(shell ${GO} env GOOS)
-IMAGE_FROM      ?= scratch
-IMAGE_HOST      ?= hub.docker.com
-IMAGE_NAME      ?= ${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}
-IMAGE_VERSION   ?= ${RELEASE_VERSION}
-
-# 部署与运行相关变量
-BUILD_ENV       ?= local
-DEPLOY_ENV      ?= dev
-
 ##@ General
 
 .PHONY: help
@@ -164,15 +153,11 @@ precheck: ## Check environment.
 
 .PHONY: generate
 manifests: ## Generate deployment manifests files.
-	@NAMESPACE=${NAMESPACE} \
-		IMAGE_NAME=${IMAGE_NAME} \
-		IMAGE_VERSION=${IMAGE_VERSION} \
-		BUILD_ENV=${BUILD_ENV} ./scripts/manifests.sh ${DEPLOY_ENV}
+	@./scripts/manifests.sh
 
 generate: precheck ## Generate code from proto files.
 	@echo ">> generation release version"
 	@./scripts/version.sh update
-
 	@echo ">> generation code from proto files"
 	@./scripts/genproto.sh
 
@@ -194,7 +179,7 @@ build: clean generate ## Build binary files according to the target system arch.
 	@mkdir build
 	@mkdir build/deploy
 	@${GO} mod tidy
-	@GOOS=${BUILD_GOOS} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
+	@GOOS=${GOOS} GOARCH=${GOARCH} ${GOBUILD} -ldflags ${BUILD_LD_FLAGS} -o build/service cmd/server/main.go
 
 .PHONY: run
 run: generate ## Run a application from your host.
@@ -208,19 +193,12 @@ docker-run: ## Run a application from your docker.
 .PHONY: docker-build
 docker-build: build manifests ## Build docker image with the application.
 	@echo ">> docker build"
-	@IMAGE_FROM=${IMAGE_FROM} \
-		IMAGE_HOST=${IMAGE_HOST} \
-		NAMESPACE=${NAMESPACE} \
-		SHORTNAME=${SHORTNAME} \
-		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh build
+	@./scripts/docker.sh build
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the application.
 	@echo ">> docker push"
-	@IMAGE_HOST=${IMAGE_HOST} \
-		NAMESPACE=${NAMESPACE} \
-		SHORTNAME=${SHORTNAME} \
-		IMAGE_VERSION=${IMAGE_VERSION} ./scripts/docker.sh push
+	@./scripts/docker.sh push
 
 ##@ Build Dependencies
 
@@ -277,6 +255,24 @@ clean: ## Clean build.
 
 // TODO(user): Add quick start
 
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "Dockerfile",
+		body: `
+FROM scratch
+
+WORKDIR /opt
+
+COPY build/service /opt/service
+COPY config/app-mini.yaml /opt/config/app.yaml
+
+EXPOSE 10080/tcp
+EXPOSE 10081/tcp
+
+ENTRYPOINT [ "/opt/service" ]
+CMD [ "--config", "/opt/config/app.yaml" ]
 `,
 	})
 }

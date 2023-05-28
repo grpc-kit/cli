@@ -48,7 +48,11 @@ SERVICE_CODE=${SHORT_NAME}.${API_VERSION}.${PRODUCT_CODE}
 		body: `
 #!/bin/bash
 
+# 引入全局静态变量
 source scripts/env
+
+# 引入全局动态变量
+source scripts/variable.sh
 
 if test -z $1; then
   echo "Usage:"
@@ -56,31 +60,13 @@ if test -z $1; then
   echo "\t ./scripts/docker.sh push"
 fi
 
-# 生成的容器镜像地址
-IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
-
 function build() {
-  # 如未设置父镜像，默认为scratch
-  if test -z ${IMAGE_FROM}; then
-    IMAGE_FROM=scratch
-  fi
-
-  cp scripts/templates/Dockerfile ./
-
-  GOHOSTOS=$(go env GOHOSTOS)
-
-  if test ${GOHOSTOS} = "darwin"; then
-    sed -i "" "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
-  else
-    sed -i "s#{{IMAGE_FROM}}#${IMAGE_FROM}#g" Dockerfile
-  fi
-
-  docker build -t ${IMAGE_ADDR} ./
-  echo "Now you can upload image: "docker push ${IMAGE_ADDR}""
+  docker build -t ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION} ./
+  echo "Now you can upload image: "docker push ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}""
 }
 
 function push() {
-  docker push ${IMAGE_ADDR}
+  docker push ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}
 }
 
 function run() {
@@ -159,7 +145,7 @@ fi
 	t.files = append(t.files, &templateFile{
 		name: "scripts/templates/Dockerfile",
 		body: `
-FROM {{IMAGE_FROM}}
+FROM _DOCKER_IMAGE_FROM_
 
 WORKDIR /opt
 
@@ -239,15 +225,18 @@ $1
 		body: `
 #!/bin/bash
 
+# 引入全局静态变量
 source scripts/env
 
-if test -z $1; then
-  echo "Usage:"
-  echo "\t ./scripts/manifests.sh dev"
+# 引入全局动态变量
+source scripts/variable.sh
+
+# 需生成的模版类型
+if test -z "${TEMPLATES}"; then
+  TEMPLATES=dockerfile
 fi
 
 GOHOSTOS=$(go env GOHOSTOS)
-DEPLOY_ENV=$1
 
 # 解决 linux 与 darwin 的 sed 存在的差异
 if test ${GOHOSTOS} = "darwin"; then
@@ -256,60 +245,126 @@ else
   SED="sed -i"
 fi
 
-# 生成的容器镜像地址
-IMAGE_ADDR=${IMAGE_HOST}/${NAMESPACE}/${SHORTNAME}:${IMAGE_VERSION}
+# 编译与部署环境
+if test -z "${BUILD_ENV}"; then
+  BUILD_ENV=local
+fi
+if test -z "${DEPLOY_ENV}"; then
+  DEPLOY_ENV=dev
+fi
+if test -z "${KUBERNETES_NAMESPACE}"; then
+  if test -n "${CI_BIZ_GROUP_APPID}"; then
+    KUBERNETES_NAMESPACE=biz-${DEPLOY_ENV}-${CI_BIZ_GROUP_APPID}
+  fi
+fi
 
 function clean() {
+  rm -rf Dockerfile
   rm -rf deploy/systemd/
   rm -rf deploy/supervisor/
   rm -rf deploy/kubernetes/${DEPLOY_ENV}
 }
 
 function systemd() {
-  mkdir -p deploy/systemd/
-  cp -rf scripts/templates/systemd/microservice.service deploy/systemd/${APPNAME}.service
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)/deploy/systemd
+  fi
 
-  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" deploy/systemd/${APPNAME}.service
-  eval "$SED" "s#_APPNAME_#${APPNAME}#g" deploy/systemd/${APPNAME}.service
+  if test ! -d "${TEMPLATE_PATH}"; then
+    mkdir -p ${TEMPLATE_PATH}
+  fi
+
+  cp -rf scripts/templates/systemd/microservice.service ${TEMPLATE_PATH}/${APPNAME}.service
+
+  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" ${TEMPLATE_PATH}/${APPNAME}.service
+  eval "$SED" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${APPNAME}.service
 }
 
 function supervisor() {
-  mkdir -p deploy/supervisor/
-  cp -rf scripts/templates/supervisor/microservice.conf deploy/supervisor/${APPNAME}.conf
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)/deploy/supervisor
+  fi
 
-  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" deploy/supervisor/${APPNAME}.conf
-  eval "$SED" "s#_APPNAME_#${APPNAME}#g" deploy/supervisor/${APPNAME}.conf
+  if test ! -d "${TEMPLATE_PATH}"; then
+    mkdir -p ${TEMPLATE_PATH}
+  fi
+
+  cp -rf scripts/templates/supervisor/microservice.conf ${TEMPLATE_PATH}/${APPNAME}.conf
+
+  eval "$SED" "s#_SERVICE_CODE_#${SERVICE_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_PRODUCT_CODE_#${PRODUCT_CODE}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_SHORT_NAME_#${SHORT_NAME}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_API_VERSION_#${API_VERSION}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
+  eval "$SED" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${APPNAME}.conf
 }
 
 function kubernetes() {
-  mkdir -p deploy/kubernetes/${DEPLOY_ENV}/
-  mkdir -p deploy/kubernetes/${DEPLOY_ENV}/config/configmap/
-  cp -rf scripts/templates/kubernetes/* deploy/kubernetes/${DEPLOY_ENV}/
-
-  if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
-    cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml deploy/kubernetes/${DEPLOY_ENV}/config/configmap/app.yaml
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)/deploy/kubernetes/${DEPLOY_ENV}
   fi
 
-  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-  eval "${SED}" "s#NAMESPACE#${NAMESPACE}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-  eval "${SED}" "s#DEPLOY_ENV#${DEPLOY_ENV}#g" deploy/kubernetes/${DEPLOY_ENV}/service/ingresses.yaml
-  eval "${SED}" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
-  eval "${SED}" "s#IMAGE_NAME#${IMAGE_NAME}#g" deploy/kubernetes/${DEPLOY_ENV}/workloads/deployment.yaml
-  eval "${SED}" "s#IMAGE_VERSION#${IMAGE_VERSION}#g" deploy/kubernetes/${DEPLOY_ENV}/kustomization.yaml
+  if test ! -d "${TEMPLATE_PATH}"; then
+    mkdir -p ${TEMPLATE_PATH}
+  fi
+
+  cp -rf scripts/templates/kubernetes/* ${TEMPLATE_PATH}
+  mv ${TEMPLATE_PATH}/workloads/deployments/microservice.yaml ${TEMPLATE_PATH}/workloads/deployments/${APPNAME}.yaml
+
+  if test -f config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml; then
+    cp -a config/app-${DEPLOY_ENV}-${BUILD_ENV}.yaml ${TEMPLATE_PATH}/config/configmap/app.yaml
+  fi
+
+  for FILE in kustomization.yaml service/ingresses.yaml service/services.yaml workloads/deployments/${APPNAME}.yaml
+  do
+    eval "${SED}" "s#_APPNAME_#${APPNAME}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_CI_REGISTRY_IMAGE_#${CI_REGISTRY_IMAGE}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_DOCKER_IMAGE_VERSION_#${DOCKER_IMAGE_VERSION}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_NAMESPACE_#${KUBERNETES_NAMESPACE}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_LABEL_PREFIX_#${KUBERNETES_LABEL_PREFIX}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_PM2_UUID_#${KUBERNETES_PM2_UUID}#g" ${TEMPLATE_PATH}/${FILE}
+    eval "${SED}" "s#_KUBERNETES_CLUSTER_DOMAIN_#${KUBERNETES_CLUSTER_DOMAIN}#g" ${TEMPLATE_PATH}/${FILE}
+  done
 }
 
-clean
-systemd
-supervisor
-kubernetes
+function dockerfile() {
+  # 如未设置父镜像，默认为 scratch
+  if test -z ${DOCKER_IMAGE_FROM}; then
+    DOCKER_IMAGE_FROM=scratch
+  fi
+
+  # 如未设置目标地址，默认为当前路径
+  if test -z "${TEMPLATE_PATH}"; then
+    TEMPLATE_PATH=$(pwd)
+  fi
+
+  cp scripts/templates/Dockerfile ${TEMPLATE_PATH}
+
+  if test ${GOHOSTOS} = "darwin"; then
+    sed -i "" "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" ${TEMPLATE_PATH}/Dockerfile
+  else
+    sed -i "s#_DOCKER_IMAGE_FROM_#${DOCKER_IMAGE_FROM}#g" ${TEMPLATE_PATH}/Dockerfile
+  fi
+}
+
+# 不做清理
+#clean
+
+# 避免运行无意义的指令
+if test "${TEMPLATES}" = "dockerfile"; then
+  dockerfile
+elif test "${TEMPLATES}" = "kubernetes"; then
+  kubernetes
+elif test "${TEMPLATES}" = "systemd"; then
+  systemd
+elif test "${TEMPLATES}" = "supervisor"; then
+  supervisor
+fi
 `,
 	})
 
@@ -362,34 +417,44 @@ stderr_logfile=/var/log/supervisor/%(program_name)s.log
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: biz-DEPLOY_ENV-NAMESPACE
+namespace: _KUBERNETES_NAMESPACE_
 
 commonLabels:
-  {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
-  {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
+  _KUBERNETES_LABEL_PREFIX_/appname: _APPNAME_
+  _KUBERNETES_LABEL_PREFIX_/pm2-uuid: _KUBERNETES_PM2_UUID_
 
 commonAnnotations:
-  {{ .Global.APIEndpoint }}/pm2-uuid: 3264e3fe-2bce-4835-8588-99651a8ddd3b
+  _KUBERNETES_LABEL_PREFIX_/pm2-uuid: _KUBERNETES_PM2_UUID_
 
 configMapGenerator:
-- name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+- name: _APPNAME_
   files:
   - app.yaml=config/configmap/app.yaml
   options:
     disableNameSuffixHash: true
 
 replicas:
-- name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+- name: _APPNAME_
   count: 1
 
 resources:
 - service/ingresses.yaml
 - service/services.yaml
-- workloads/deployment.yaml
+- workloads/deployments/_APPNAME_.yaml
 
 images:
-- name: IMAGE_NAME
-  newTag: IMAGE_VERSION
+- name: _CI_REGISTRY_IMAGE_
+  newTag: _DOCKER_IMAGE_VERSION_
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name:  "scripts/templates/kubernetes/config/configmap/app.yaml",
+		parse: true,
+		body: `
+# https://github.com/grpc-kit/pkg/blob/main/cfg/app-sample.yaml
+
+# 由于安全问题，默认配置不会被存放至 git 仓库，请自行添加。
 `,
 	})
 
@@ -403,17 +468,17 @@ kind: Ingress
 metadata:
   #annotations:
   #  nginx.ingress.kubernetes.io/proxy-body-size: 10m
-  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  name: _APPNAME_
 spec:
   ingressClassName: nginx
   rules:
-  - host: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}.biz-DEPLOY_ENV-NAMESPACE.{{ .Global.APIEndpoint }}
+  - host: _APPNAME_._KUBERNETES_NAMESPACE_._KUBERNETES_CLUSTER_DOMAIN_
     http:
       paths:
       - path: /
         backend:
           service:
-            name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+            name: _APPNAME_
             port:
               number: 10080
         pathType: Prefix
@@ -428,7 +493,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  name: _APPNAME_
 spec:
   ports:
   - name: http
@@ -445,14 +510,14 @@ spec:
 	})
 
 	t.files = append(t.files, &templateFile{
-		name:  "scripts/templates/kubernetes/workloads/deployment.yaml",
+		name:  "scripts/templates/kubernetes/workloads/deployments/microservice.yaml",
 		parse: true,
 		body: `
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+  name: _APPNAME_
 spec:
   revisionHistoryLimit: 3
   strategy:
@@ -467,7 +532,7 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchLabels:
-                {{ .Global.APIEndpoint }}/appname: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+                _KUBERNETES_LABEL_PREFIX_/appname: _APPNAME_
             topologyKey: kubernetes.io/hostname
       containers:
       - args:
@@ -480,7 +545,7 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: status.podIP
-        image: IMAGE_NAME:latest
+        image: _CI_REGISTRY_IMAGE_:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 5
@@ -490,11 +555,11 @@ spec:
           tcpSocket:
             port: 10081
           timeoutSeconds: 5
-        name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+        name: _APPNAME_
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /healthz?service={{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}
+            path: /healthz?service=_SERVICE_CODE_
             port: 10080
             scheme: HTTP
           initialDelaySeconds: 15
@@ -535,7 +600,7 @@ spec:
       - name: config-volume
         configMap:
           defaultMode: 420
-          name: {{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}
+          name: _APPNAME_
       - name: applog-volume
         emptyDir: {}
 `,
@@ -617,4 +682,157 @@ fi
 `,
 	})
 
+	t.files = append(t.files, &templateFile{
+		name: "scripts/kaniko.sh",
+		body: `
+#!/bin/sh
+
+# TODO; kaniko 镜像仅支持 /bin/sh 解析器
+
+# 引入全局静态变量
+source scripts/env
+
+# 引入全局动态变量
+source scripts/variable.sh
+
+function build() {
+  /kaniko/executor --dockerfile ./Dockerfile --context ./ --destination ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION} --log-format text --log-timestamp
+}
+
+build
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/kcli.sh",
+		body: `
+#!/bin/bash
+
+# 引入全局静态变量
+source scripts/env
+
+# 引入全局动态变量
+source scripts/variable.sh
+
+# 当前目录必须为 gitops 仓库根路径
+function commit() {
+  # 变量 CI_BIZ_CODE_BUILD 来自 CICD 系统
+  if test "${CI_BIZ_CODE_BUILD}" != "true"; then
+    return
+  fi
+
+  # fix: https://github.blog/2022-04-12-git-security-vulnerability-announced/
+  git config --global --add safe.directory $(pwd)
+
+  cd ${KUBERNETES_YAML_DIRECTORY}
+  /bin/kustomize edit set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}
+
+  git config user.name ${BUILD_USER}
+  git config user.email ${BUILD_USER_EMAIL}
+
+  git add *
+  git commit -m "build: set image ${CI_REGISTRY_IMAGE}:${DOCKER_IMAGE_VERSION}"
+
+  # 变量 CI_OPS_REPO_URL 来自 CICD 系统
+  git remote add gitops ${CI_OPS_REPO_URL}
+  git push gitops HEAD:refs/heads/main
+}
+
+# 当前目录必须为 gitops 仓库根路径
+function apply() {
+  cd ${KUBERNETES_YAML_DIRECTORY}
+  /bin/kustomize build | /bin/kubectl apply -f -
+}
+
+$1
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/variable.sh",
+		body: `
+#!/bin/bash
+
+# 生成的镜像相关
+# DOCKER_IMAGE_FROM=scratch
+RELEASE_VERSION=$(cat VERSION)
+if test -z "${DOCKER_IMAGE_VERSION}"; then
+  if test -z "${BUILD_ID}"; then
+    DOCKER_IMAGE_VERSION=latest
+  else
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
+  fi
+fi
+if test -z "${CI_REGISTRY_IMAGE}"; then
+  if test -z "${CI_REGISTRY_HOSTNAME}"; then
+    CI_REGISTRY_HOSTNAME="docker.io"
+  fi
+  if test -z "${CI_REGISTRY_NAMESPACE}"; then
+    CI_REGISTRY_NAMESPACE=${PRODUCT_CODE}
+  fi
+  CI_REGISTRY_IMAGE=${CI_REGISTRY_HOSTNAME}/${CI_REGISTRY_NAMESPACE}/${APPNAME}
+fi
+
+# Kubernetes 相关变量
+if test -z "${KUBERNETES_NAMESPACE}"; then
+  KUBERNETES_NAMESPACE=default
+fi
+
+# 启用构建相关的用户
+if test -z "${BUILD_USER}"; then
+  BUILD_USER=${USER}
+fi
+if test -z "${BUILD_USER_EMAIL}"; then
+  BUILD_USER_EMAIL=${BUILD_USER}@$(hostname)
+fi
+
+# 部署编译环境相关
+if test -z "${DEPLOY_ENV}"; then
+  DEPLOY_ENV=dev
+fi
+if test -z "${BUILD_ENV}"; then
+  BUILD_ENV=local
+fi
+
+if test -z "${CI_BIZ_GROUP_APPID}"; then
+  CI_BIZ_GROUP_APPID = ${PRODUCT_CODE}
+fi
+
+# 如果存在以下各对应环境的文件，则覆盖以上所设置的同名变量
+if test -f "scripts/env-${DEPLOY_ENV}-${BUILD_ENV}"; then
+  source scripts/env-${DEPLOY_ENV}-${BUILD_ENV}
+fi
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/env-dev-local",
+		body: `
+# 如果开启以下环境变量，则覆盖所有 CI 系统中设置的同名值
+
+# 业务线代号：用于获取 git 授权、k8s 空间的关联
+#CI_BIZ_GROUP_APPID=uptime
+
+# 镜像名称：用于构建生成的镜像名称
+#CI_REGISTRY_IMAGE=docker.io/opsaid/test9
+
+# 镜像版本：用于构建生成的镜像版本
+#DOCKER_IMAGE_VERSION=0.1.0
+
+# K8S 标签前缀
+#KUBERNETES_LABEL_PREFIX=
+
+# 部署在 K8S 命名空间
+#KUBERNETES_NAMESPACE=
+
+# K8S 资源关联计费项目ID
+#KUBERNETES_PM2_UUID=
+
+# 生成 K8S YAML 模版地址
+#KUBERNETES_YAML_DIRECTORY=
+
+# 生成 K8S ingress 默认域名后缀
+#KUBERNETES_CLUSTER_DOMAIN=
+`,
+	})
 }

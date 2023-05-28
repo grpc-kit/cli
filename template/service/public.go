@@ -38,7 +38,7 @@ func (t *templateService) fileDirectoryPublic() {
   </head>
 
   <body>
-    <redoc spec-url='/openapi-spec/microservice.swagger.json'></redoc>
+    <redoc spec-url='./microservice.swagger.json'></redoc>
     <script src="./redoc.standalone.js"> </script>
   </body>
 </html>
@@ -70,7 +70,9 @@ import (
 	"embed"
 )
 
-//go:embed openapi-spec/*
+//go:embed openapi-spec/*.js
+//go:embed openapi-spec/*.json
+//go:embed openapi-spec/*.html
 var Assets embed.FS
 `,
 	})
