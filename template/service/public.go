@@ -70,7 +70,9 @@ import (
 	"embed"
 )
 
-//go:embed openapi-spec/*
+//go:embed openapi-spec/*.js
+//go:embed openapi-spec/*.json
+//go:embed openapi-spec/*.html
 var Assets embed.FS
 `,
 	})
