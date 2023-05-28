@@ -45,7 +45,7 @@ docker run \
     --rm \
     -v $(pwd):/usr/local/src \
     -w /usr/local/src \
-    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.0 \
+    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.2 \
     grpc-kit-cli new -t service -p opsaid -s test1
 ```
 
@@ -57,7 +57,7 @@ docker run -i -t --rm \
     -v $(pwd):/usr/local/src \
     -w /usr/local/src \
     --network host \
-    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.0 \
+    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.2 \
     make run
 ```
 
