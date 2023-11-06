@@ -795,7 +795,7 @@ if test -z "${BUILD_ENV}"; then
 fi
 
 if test -z "${CI_BIZ_GROUP_APPID}"; then
-  CI_BIZ_GROUP_APPID = ${PRODUCT_CODE}
+  CI_BIZ_GROUP_APPID=${PRODUCT_CODE}
 fi
 
 # 如果存在以下各对应环境的文件，则覆盖以上所设置的同名变量
