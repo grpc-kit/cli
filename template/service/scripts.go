@@ -816,6 +816,9 @@ fi
 # 镜像名称：用于构建生成的镜像名称
 #CI_REGISTRY_IMAGE=docker.io/opsaid/test9
 
+# 基础镜像：构建业务镜像依赖的基础环境
+#DOCKER_IMAGE_FROM=scratch
+
 # 镜像版本：用于构建生成的镜像版本
 #DOCKER_IMAGE_VERSION=0.1.0
 
