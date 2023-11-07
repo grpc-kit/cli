@@ -170,7 +170,7 @@ lint: generate ## Run go fmt and vet against code.
 .PHONY: test
 test: generate ## Run unit tests.
 	@${GO} mod tidy
-	@${GO} test ./...
+	@${GO} test ./... -timeout 3m -v -gcflags=-l -cover=true
 
 ##@ Build
 
