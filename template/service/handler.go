@@ -122,10 +122,14 @@ func (m *Microservice) privateStreamServerInterceptor() []grpc.StreamServerInter
 	return nil
 }
 
-func (m *Microservice) privateHTTPHandle(mux *http.ServeMux) {
+func (m *Microservice) privateHTTPHandle(mux *http.ServeMux) error {
+	// 这里属于自定义 http 接口，访问 /favicon.ico 不会产生链路数据
+	// 如需捕获链路数据，参考文档：https://grpc-kit.com/docs/spec-cfg/observables/
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintf(w, "")
 	})
+
+	return nil
 }
 `,
 	})
@@ -163,7 +167,9 @@ func (m *Microservice) Register(ctx context.Context) error {
 	mux.Handle("/openapi-spec/", http.FileServer(http.FS(doc.Assets)))
 
 	// 这里添加其他自定义实现
-	m.privateHTTPHandle(mux)
+	if err := m.privateHTTPHandle(mux); err != nil {
+		return err
+	}
 
 	// 注册HTTP网关
 	if err := m.server.RegisterGateway(mux); err != nil {
