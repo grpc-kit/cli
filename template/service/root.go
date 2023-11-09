@@ -61,15 +61,16 @@ module {{ .Global.Repository }}
 go 1.18
 
 require (
-	github.com/gogo/protobuf v1.3.2
-	github.com/golang/protobuf v1.5.2
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/grpc-kit/pkg v0.3.1
-	github.com/sirupsen/logrus v1.8.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
+	github.com/grpc-kit/pkg v0.3.3
+	github.com/sirupsen/logrus v1.9.2
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
-	google.golang.org/grpc v1.43.0
+	go.opentelemetry.io/otel v1.19.0
+	go.opentelemetry.io/otel/metric v1.19.0
+	go.opentelemetry.io/otel/trace v1.19.0
+	google.golang.org/grpc v1.58.2
+	google.golang.org/protobuf v1.31.0
 )
 replace google.golang.org/grpc => google.golang.org/grpc v1.38.0
 `,
@@ -170,7 +171,7 @@ lint: generate ## Run go fmt and vet against code.
 .PHONY: test
 test: generate ## Run unit tests.
 	@${GO} mod tidy
-	@${GO} test ./...
+	@${GO} test ./... -timeout 3m -v -gcflags=-l -cover=true
 
 ##@ Build
 

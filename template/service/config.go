@@ -60,6 +60,13 @@ debugger:
   log_level: debug
   log_format: text
 
+# 可观测性配置
+#observables:
+#  enable: true
+#  exporters:
+#    otlp:
+#      endpoint: http://127.0.0.1:4317
+
 # 应用私有配置
 independent:
   name: grpc-kit

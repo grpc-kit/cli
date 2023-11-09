@@ -795,7 +795,7 @@ if test -z "${BUILD_ENV}"; then
 fi
 
 if test -z "${CI_BIZ_GROUP_APPID}"; then
-  CI_BIZ_GROUP_APPID = ${PRODUCT_CODE}
+  CI_BIZ_GROUP_APPID=${PRODUCT_CODE}
 fi
 
 # 如果存在以下各对应环境的文件，则覆盖以上所设置的同名变量
@@ -815,6 +815,9 @@ fi
 
 # 镜像名称：用于构建生成的镜像名称
 #CI_REGISTRY_IMAGE=docker.io/opsaid/test9
+
+# 基础镜像：构建业务镜像依赖的基础环境
+#DOCKER_IMAGE_FROM=scratch
 
 # 镜像版本：用于构建生成的镜像版本
 #DOCKER_IMAGE_VERSION=0.1.0

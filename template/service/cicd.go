@@ -77,7 +77,7 @@ unit-tests:
 coverage:
   stage: test
   script:
-    - go test ./... -coverprofile=coverage.txt -covermode count
+    - go test ./... -timeout 3m -v -gcflags=-l -cover=true -coverprofile=coverage.txt -covermode count
     - cat coverage.txt
 
 # 生成发送测试报告
