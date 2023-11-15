@@ -11,6 +11,140 @@
 
 ## [Unreleased]
 
+## [0.3.4] - 2023-11-15
+
+### Added
+
+#### 新增客户端 health 验证示例函数
+
+生成服务的模版地址 `cmd/client/health.go`。
+
+```shell
+# go run cmd/client/health.go
+
+grpc_health_v1 check ok
+grpc health private check ok
+```
+
+该示例探测以下两个方法：
+
+1. 标准的 [grpc_health_v1](https://pkg.go.dev/google.golang.org/grpc/health/grpc_health_v1) Check 与 Watch 方法；
+2. 自定义的 `HealthCheck` 方法：
+
+```text
+rpc HealthCheck(grpc_kit.api.known.status.v1.HealthCheckRequest) returns (grpc_kit.api.known.status.v1.HealthCheckResponse) {}
+```
+
+#### 对类库 google.golang.org/grpc 版本不在锁定
+
+原先的版本锁定为 v1.38.0 因为被 etcd 依赖，此次调整更新为最新 v1.59.0 版本，移除 go.mod 中 replace 语句。
+
+```shell
+replace google.golang.org/grpc => google.golang.org/grpc v1.38.0
+```
+
+### Fixed
+
+#### 修复 rpc_grpc_status_code 状态码获取不对
+
+```text
+rpc_server_duration_milliseconds_bucket{rpc_grpc_status_code="0",rpc_method="Demo", ... ,rpc_system="grpc",le="0"} 1
+rpc_server_duration_milliseconds_bucket{rpc_grpc_status_code="0",rpc_method="Demo", ... ,rpc_system="grpc",le="10"} 2
+```
+
+这个为 [otelgrpc 在 v0.45.0 版本](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/9d4eb7e7706038b07d33f83f76afbe13f53d171d/instrumentation/google.golang.org/grpc/otelgrpc/interceptor.go#L371C69-L371C69) 之前存在 BUG 需升级版本，`statusCode` 未成功赋值。
+
+```text
+go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
+```
+
+在新版本中已经修复。
+
+## [0.3.3] - 2023-11-09
+
+### Added
+
+#### 配置对接兼容 S3 接口的公有云对象存储
+
+1. 基于 minio-go/v7 封装，提供简单：Get、Upload、Delete、Attributes、Iter 等方法；
+2. 实现腾讯云 COS、阿里云 OSS的接入，见[配置使用文档](https://grpc-kit.com/docs/spec-cfg/objstore/)。
+
+#### 可观测性重构以支持 OTLP 协议上报数据
+
+1. 支持 遥测数据（链路、指标）通过 OLTP 协议上报数据，见 [配置使用文档](https://grpc-kit.com/docs/spec-cfg/observables/)；
+2. 支持 阿里云 [可观测链路 OpenTelemetry 版](https://grpc-kit.com/docs/spec-cfg/observables/#%E5%AF%B9%E6%8E%A5%E9%98%BF%E9%87%8C%E4%BA%91%E6%9C%8D%E5%8A%A1) 的接入；
+3. 支持 腾讯云 [应用性能监控](https://grpc-kit.com/docs/spec-cfg/observables/#%E5%AF%B9%E6%8E%A5%E8%85%BE%E8%AE%AF%E4%BA%91%E6%9C%8D%E5%8A%A1) 的接入；
+4. 支持 [私有 jaeger 服务](https://grpc-kit.com/docs/spec-cfg/observables/#%E5%AF%B9%E6%8E%A5%E7%A7%81%E6%9C%89-jaeger-%E6%9C%8D%E5%8A%A1) 的接入。
+
+#### 环境文件 env-* 新增变量 DOCKER_IMAGE_FROM
+
+```shell
+scripts/env-dev-local
+
+# 基础镜像：构建业务镜像依赖的基础环境
+DOCKER_IMAGE_FROM=centos:latest
+```
+
+也就是控制 Dockerfile 中 FROM 的镜像来源。
+
+#### 在 jwt 中添加属性 `tenant` 表示租户
+
+示例 token 格式如下：
+
+```shell
+{
+  "aud": "api-gateway",
+  "exp": 1893427200,
+  "iat": 1668396542,
+  "iss": "https://grpc-kit.com/oauth2",
+  "sub": "oneops",
+  "email": "oneops@grpc-kit.com",
+  "email_verified": true,
+  "federated_claims": {
+    "connector_id": "local",
+    "user_id": "oneops"
+  },
+  "groups": [
+    "admin"
+  ],
+  "tenant" : "default"
+}
+```
+
+相比原先新增 `tenant` 表示租户，参考了[第三方文档设计](https://userfront.com/dashboard/jwt)。
+
+#### 支持 http 响应体为空时以 204 状态码返回
+
+当微服务中 rpc 方法定义使用 `google.protobuf.Empty` 类型返回时，处理请求时会在 http gateway 中判断 proto 类型是否为 `*emptypb.Empty` 如则以状态码 204 返回。
+
+```golang
+// 该微服务支持的 RPC 方法定义
+service OpsaidTest1 {
+  rpc HelloNoContent(DemoRequest) returns (google.protobuf.Empty) {}
+}
+```
+
+### Fixed
+
+#### make manifests 变量问题修复
+
+```shell
+scripts/variable.sh: line 45: CI_BIZ_GROUP_APPID: command not found
+```
+
+### Changed
+
+#### 升级 go-grpc-middleware 为 v2 版本
+
+1. go-grpc-middleware v1 已被废弃；
+2. 更改了服务依赖组件，以兼容 v2 版本。
+
+#### 私有 http handler 实现函数添加错误返回
+
+在代码文件 `handler/private.go` 中函数 `privateHTTPHandle(mux *http.ServeMux) error` 添加错误返回。
+
+同时这里实现的 http 接口默认不支持链路可观测，需用户特殊编码后开启，见[配置使用文档](https://grpc-kit.com/docs/spec-cfg/observables/)。
+
 ## [0.3.2] - 2023-05-28
 
 ### Added

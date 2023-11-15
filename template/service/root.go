@@ -58,21 +58,20 @@ public/doc/openapi-spec/microservice.swagger.json
 		body: `
 module {{ .Global.Repository }}
 
-go 1.18
+go 1.20
 
 require (
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0
-	github.com/grpc-kit/pkg v0.3.3
-	github.com/sirupsen/logrus v1.9.2
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1
+	github.com/grpc-kit/pkg v0.3.4
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.10.1
-	go.opentelemetry.io/otel v1.19.0
-	go.opentelemetry.io/otel/metric v1.19.0
-	go.opentelemetry.io/otel/trace v1.19.0
-	google.golang.org/grpc v1.58.2
+	github.com/spf13/viper v1.17.0
+	go.opentelemetry.io/otel v1.20.0
+	go.opentelemetry.io/otel/metric v1.20.0
+	go.opentelemetry.io/otel/trace v1.20.0
+	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 )
-replace google.golang.org/grpc => google.golang.org/grpc v1.38.0
 `,
 	})
 
