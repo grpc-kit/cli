@@ -49,6 +49,7 @@ security:
   authentication:
     insecure_rpcs:
       - Check
+      - Watch
       - HealthCheck
     http_users:
       - username: user1
