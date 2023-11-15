@@ -11,6 +11,55 @@
 
 ## [Unreleased]
 
+## [0.3.4] - 2023-11-15
+
+### Added
+
+#### 新增客户端 health 验证示例函数
+
+生成服务的模版地址 `cmd/client/health.go`。
+
+```shell
+# go run cmd/client/health.go
+
+grpc_health_v1 check ok
+grpc health private check ok
+```
+
+该示例探测以下两个方法：
+
+1. 标准的 [grpc_health_v1](https://pkg.go.dev/google.golang.org/grpc/health/grpc_health_v1) Check 与 Watch 方法；
+2. 自定义的 `HealthCheck` 方法：
+
+```text
+rpc HealthCheck(grpc_kit.api.known.status.v1.HealthCheckRequest) returns (grpc_kit.api.known.status.v1.HealthCheckResponse) {}
+```
+
+#### 对类库 google.golang.org/grpc 版本不在锁定
+
+原先的版本锁定为 v1.38.0 因为被 etcd 依赖，此次调整更新为最新 v1.59.0 版本，移除 go.mod 中 replace 语句。
+
+```shell
+replace google.golang.org/grpc => google.golang.org/grpc v1.38.0
+```
+
+### Fixed
+
+#### 修复 rpc_grpc_status_code 状态码获取不对
+
+```text
+rpc_server_duration_milliseconds_bucket{rpc_grpc_status_code="0",rpc_method="Demo", ... ,rpc_system="grpc",le="0"} 1
+rpc_server_duration_milliseconds_bucket{rpc_grpc_status_code="0",rpc_method="Demo", ... ,rpc_system="grpc",le="10"} 2
+```
+
+这个为 [otelgrpc 在 v0.45.0 版本](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/9d4eb7e7706038b07d33f83f76afbe13f53d171d/instrumentation/google.golang.org/grpc/otelgrpc/interceptor.go#L371C69-L371C69) 之前存在 BUG 需升级版本，`statusCode` 未成功赋值。
+
+```text
+go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
+```
+
+在新版本中已经修复。
+
 ## [0.3.3] - 2023-11-09
 
 ### Added
