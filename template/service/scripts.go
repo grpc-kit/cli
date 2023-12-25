@@ -124,7 +124,7 @@ protoc \
 
 # 移动生成的 microservice.swagger.json 文件
 if test -f ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json; then
-  mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/doc/openapi-spec/
+  mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/openapi/
 fi
 `,
 	})
@@ -559,7 +559,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /healthz?service=_SERVICE_CODE_
+            path: /api/healthz?service=_SERVICE_CODE_
             port: 10080
             scheme: HTTP
           initialDelaySeconds: 15

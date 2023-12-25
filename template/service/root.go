@@ -42,13 +42,17 @@ config/app-dev-*
 config/app-test-*
 config/app-prod-*
 
+# Frontend web ui
+web/admin/node_modules
+web/webroot/node_modules
+public/openapi/microservice.swagger.json
+
 # Others
 .swp
 .bak
 .idea/
 build/
 backup/
-public/doc/openapi-spec/microservice.swagger.json
 `,
 	})
 

@@ -144,10 +144,9 @@ package handler
 
 import (
 	"context"
-	"net/http"
 
 	pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
-	"{{ .Global.Repository }}/public/doc"
+	"{{ .Global.Repository }}/public"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -163,8 +162,10 @@ func (m *Microservice) Register(ctx context.Context) error {
 		return err
 	}
 
-	// 注册API文档
-	mux.Handle("/openapi-spec/", http.FileServer(http.FS(doc.Assets)))
+    // 注册前端托管静态数据
+    if err = m.baseCfg.HTTPHandlerFrontend(mux, public.Assets); err != nil {
+        return err
+    }
 
 	// 这里添加其他自定义实现
 	if err := m.privateHTTPHandle(mux); err != nil {
@@ -201,7 +202,7 @@ import (
 )
 
 // Demo test
-func (m Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoResponse, error) {
+func (m *Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoResponse, error) {
 	m.logger.Warnf("test demo warn: %v", "func Demo")
 
 	result := &pb.DemoResponse{
@@ -255,7 +256,7 @@ import (
 )
 
 // HealthCheck 用于健康检测
-func (m Microservice) HealthCheck(ctx context.Context, req *statusv1.HealthCheckRequest) (*statusv1.HealthCheckResponse, error) {
+func (m *Microservice) HealthCheck(ctx context.Context, req *statusv1.HealthCheckRequest) (*statusv1.HealthCheckResponse, error) {
 	if req.Service == m.code {
 		return &statusv1.HealthCheckResponse{
 			Status: statusv1.HealthCheckResponse_SERVING,

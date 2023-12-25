@@ -52,6 +52,7 @@ func (t *templateService) Generate() error {
 	t.fileDirectoryDeploy()
 	t.fileDirectoryCICD()
 	t.fileDirectoryInternal()
+	t.fileDirectoryWeb()
 
 	var err error
 	for _, f := range t.files {
