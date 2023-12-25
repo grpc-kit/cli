@@ -114,7 +114,7 @@ config_version: 3
 http:
   rules:
   - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
-    get: "/healthz"
+    get: "/api/healthz"
 
   - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
     post: "/api/demo"
@@ -198,7 +198,7 @@ openapiOptions:
       option:
         tags:
           - "internal"
-        description: '请务删除！\n 接口格式：/healthz?service={{ .Global.ServiceCode }}\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
+        description: '请务删除！\n 接口格式：/api/healthz?service={{ .Global.ServiceCode }}\n 请求成功访问状态码200，且内容为：{"status": "SERVING"}'
         summary: "健康检测"
         responses:
           "200":
