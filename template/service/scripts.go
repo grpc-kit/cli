@@ -758,7 +758,7 @@ $1
 RELEASE_VERSION=$(cat VERSION)
 if test -z "${DOCKER_IMAGE_VERSION}"; then
   if test -z "${BUILD_ID}"; then
-    DOCKER_IMAGE_VERSION=latest
+    DOCKER_IMAGE_VERSION=${RELEASE_VERSION}
   else
     DOCKER_IMAGE_VERSION=${RELEASE_VERSION}-build.${BUILD_ID}
   fi
@@ -808,7 +808,51 @@ fi
 	t.files = append(t.files, &templateFile{
 		name: "scripts/env-dev-local",
 		body: `
-# 如果开启以下环境变量，则覆盖所有 CI 系统中设置的同名值
+# 开启以下环境变量，则覆盖部署构建系统运行时动态生成的同名变量值
+
+# 构建系统通过获取以下变量决定使用哪个 "env-${DEPLOY_ENV}-${BUILD_ENV}" 文件
+#
+# export DEPLOY_ENV=dev
+# export BUILD_ENV=local
+
+# 业务线代号：用于获取 git 授权、k8s 空间的关联
+#CI_BIZ_GROUP_APPID=uptime
+
+# 镜像名称：用于构建生成的镜像名称
+#CI_REGISTRY_IMAGE=docker.io/opsaid/test9
+
+# 基础镜像：构建业务镜像依赖的基础环境
+#DOCKER_IMAGE_FROM=scratch
+
+# 镜像版本：用于构建生成的镜像版本
+DOCKER_IMAGE_VERSION=latest
+
+# K8S 标签前缀
+#KUBERNETES_LABEL_PREFIX=
+
+# 部署在 K8S 命名空间
+#KUBERNETES_NAMESPACE=
+
+# K8S 资源关联计费项目ID
+#KUBERNETES_PM2_UUID=
+
+# 生成 K8S YAML 模版地址
+#KUBERNETES_YAML_DIRECTORY=
+
+# 生成 K8S ingress 默认域名后缀
+#KUBERNETES_CLUSTER_DOMAIN=
+`,
+	})
+
+	t.files = append(t.files, &templateFile{
+		name: "scripts/env-test-local",
+		body: `
+# 开启以下环境变量，则覆盖部署构建系统运行时动态生成的同名变量值
+
+# 构建系统通过获取以下变量决定使用哪个 "env-${DEPLOY_ENV}-${BUILD_ENV}" 文件
+#
+# export DEPLOY_ENV=test
+# export BUILD_ENV=local
 
 # 业务线代号：用于获取 git 授权、k8s 空间的关联
 #CI_BIZ_GROUP_APPID=uptime
