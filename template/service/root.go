@@ -42,13 +42,17 @@ config/app-dev-*
 config/app-test-*
 config/app-prod-*
 
+# Frontend web ui
+web/admin/node_modules
+web/webroot/node_modules
+public/openapi/microservice.swagger.json
+
 # Others
 .swp
 .bak
 .idea/
 build/
 backup/
-public/doc/openapi-spec/microservice.swagger.json
 `,
 	})
 
@@ -62,7 +66,7 @@ go 1.20
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1
-	github.com/grpc-kit/pkg v0.3.4
+	github.com/grpc-kit/pkg v0.3.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
@@ -152,7 +156,7 @@ precheck: ## Check environment.
 ##@ Development
 
 .PHONY: generate
-manifests: ## Generate deployment manifests files.
+manifests: ## Generate deployment manifests files, like: "make manifests TEMPLATES=kubernetes".
 	@./scripts/manifests.sh
 
 generate: precheck ## Generate code from proto files.

@@ -111,6 +111,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	_ "google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
@@ -149,7 +150,7 @@ func main() {
 func grpcConn(ctx context.Context) (*grpc.ClientConn, error) {
 	// TODO; 仅用于测试，配置为该服务对外的地址
 	cc, err := grpc.DialContext(ctx, "127.0.0.1:10081",
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultServiceConfig(serviceConfig))
 	if err != nil {
 		return nil, err

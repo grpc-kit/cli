@@ -45,7 +45,7 @@ docker run \
     --rm \
     -v $(pwd):/usr/local/src \
     -w /usr/local/src \
-    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.2 \
+    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.5 \
     grpc-kit-cli new -t service -p opsaid -s test1
 ```
 
@@ -57,7 +57,7 @@ docker run -i -t --rm \
     -v $(pwd):/usr/local/src \
     -w /usr/local/src \
     --network host \
-    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.2 \
+    ccr.ccs.tencentyun.com/grpc-kit/cli:0.3.5 \
     make run
 ```
 
@@ -123,7 +123,7 @@ OK
 探测流量同时到 gateway 与 grpc 服务。
 
 ```shell
-# curl 'http://127.0.0.1:8080/healthz?service=test1.v1.opsaid'
+# curl 'http://127.0.0.1:8080/api/healthz?service=test1.v1.opsaid'
 {"status":"SERVING"}
 ```
 

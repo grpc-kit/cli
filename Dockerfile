@@ -1,6 +1,7 @@
-ARG TARGETPLATFORM
+#ARG TARGETPLATFORM
 
-FROM --platform=$TARGETPLATFORM golang:1.18.10-bullseye as builder
+#FROM --platform=$TARGETPLATFORM golang:1.20-bullseye as builder
+FROM golang:1.20-bullseye as builder
 
 # 更换镜像地址
 RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
@@ -33,13 +34,13 @@ RUN go mod tidy \
 	&& make protoc-gen-openapiv2 \
     && git clone -b v0.3.0 --depth 1 https://github.com/grpc-kit/api.git $GOPATH/src/github.com/grpc-kit/api \
     && git clone --depth 1 https://github.com/googleapis/googleapis.git $GOPATH/src/github.com/googleapis/googleapis \
-    && git clone -b v2.15.2 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway
+    && git clone -b v2.18.1 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway
 
 # 用于容器内构建镜像
 FROM --platform=$TARGETPLATFORM gcr.io/kaniko-project/executor:v1.9.1 as kaniko
 
 # 用于 go 应用的编译
-FROM --platform=$TARGETPLATFORM golang:1.18.10-bullseye
+FROM --platform=$TARGETPLATFORM golang:1.20-bullseye
 
 # 拷贝 kaniko 内容
 COPY --from=kaniko /kaniko /kaniko
