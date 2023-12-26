@@ -11,6 +11,164 @@
 
 ## [Unreleased]
 
+## [0.3.5] - 2023-12-26
+
+### Added
+
+#### 新增前端静态文件托管服务
+
+如果版本为 "grpc-kit-cli/0.3.4" 或之前，可通过更改由该工具生成的模版中以下部分代码，以接入服务。
+
+更多内容也可参考[文档](https://grpc-kit.com/docs/spec-cfg/frontend/)。
+
+- 新增 .gitignore 以下内容
+
+```text
+# Frontend
+web/admin/node_modules
+web/webroot/node_modules
+public/openapi/microservice.swagger.json
+```
+
+- 更改 public 目录结构与 "embed.go" 内容
+
+```shell
+mv public/doc public/openapi
+
+mkdir public/admin public/webroot
+
+mv public/openapi/embed.go public
+```
+
+```golang
+package public
+
+import (
+	"embed"
+)
+
+//go:embed admin/*
+//go:embed openapi/*
+//go:embed webroot/*
+var Assets embed.FS
+```
+
+- 变更 handler/register.go 对静态文件引用
+
+```shell
+import xxx/xxx/public/doc
+
+import xxx/xxx/public
+```
+
+```shell
+    // 移除
+    // 注册API文档
+    mux.Handle("/openapi-spec/", http.FileServer(http.FS(doc.Assets)))
+
+    // 新增
+    // 注册前端静态数据托管
+    if err = m.baseCfg.HTTPHandlerFrontend(mux, public.Assets); err != nil {
+        return err
+    }
+```
+
+- 变更 public/doc/openapi-spec 路径
+
+```text
+scripts/genproto.sh
+
+mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/doc/openapi-api/
+
+->
+
+mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/openapi/
+```
+
+- 健康探测 healthz 地址的变更
+
+由 "/healthz" 变更为 "/api/healthz"，如有接口探测需更改下地址，如 k8s 的存活探测，参考以下 "Changed" 部分说明。
+
+#### 使用 TLS 加密 gRPC 或 HTTP 连接
+
+支持 http 与 grpc 服务 tls 加密，可使用 acme TLS-ALPN-01 方式自动化证书等，详见[文档](https://grpc-kit.com/docs/spec-cfg/services/#使用-tls-加密-grpc-或-http-连接)。
+
+#### 可单独开启或关闭 gRPC 或 HTTP 服务
+
+```text
+services:
+  grpc_service
+    enabled: true
+
+  http_service
+    enabled: false
+```
+
+这样开启 grpc 并关闭 http 服务。
+
+### Changed
+
+#### 统一 Microservice 使用指针接收器
+
+原 Microservice 结构体在 rpc 定义方法中均非指针形式，如下：
+
+```shell
+func (m Microservice) HealthCheck
+```
+
+现对其结构体统一使用指针形式，更改为：
+
+```text
+func (m *Microservice) HealthCheck
+```
+
+这里参考了 https://github.com/grpc/grpc-go/blob/v1.60.0/health/server.go#L46。
+
+#### 开发环境容器镜像默认以 "latest" 为标签
+
+构建系统通过获取以下变量决定使用哪个 "env-${DEPLOY_ENV}-${BUILD_ENV}" 文件
+
+```text
+export DEPLOY_ENV=dev
+export BUILD_ENV=local
+```
+
+当为 dev 环境构建容器镜像标签默认均为 "latest"，其他环境默认使用 "VERSION" 内容。
+
+#### 健康探测 http api 接口 healthz 地址变更
+
+由于针对所有 grpc 转化为 http 接口强制使用 "/api/" 为前缀，所以 "/healthz" 也变更为 "/api/healthz"，这涉及到旧健康检测使用到的地方，如 k8s manifests：
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        readinessProbe:
+          httpGet:
+            path: /api/healthz?service=_SERVICE_CODE_
+            port: 10080
+            scheme: HTTP
+```
+
+#### 更改了默认 grpc 不使用 tls 的行为
+
+不在使用 `grpc.WithInsecure()` 由 `grpc.WithTransportCredentials(insecure.NewCredentials())` 代替该功能，但这样不兼容原服务连接，需调整客户端代码，如：
+
+```text
+grpc.DialContext(ctx, "127.0.0.1:10081",
+        grpc.WithInsecure(),
+        grpc.WithDefaultServiceConfig(serviceConfig))
+```
+
+```text
+grpc.DialContext(ctx, "127.0.0.1:10081",
+        grpc.WithTransportCredentials(insecure.NewCredentials()),
+        grpc.WithDefaultServiceConfig(serviceConfig))
+```
+
+目前约定，如果客户端主动配置了 `http_service.tls_client.ca_file` 或 `http_service.tls_client.insecure_skip_verify` 则说明服务端主动配置了证书用于加密连接，如果没有则服务端默认使用 `insecure.NewCredentials()` 实现。
+
 ## [0.3.4] - 2023-11-15
 
 ### Added
