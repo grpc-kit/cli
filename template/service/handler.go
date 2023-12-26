@@ -162,10 +162,10 @@ func (m *Microservice) Register(ctx context.Context) error {
 		return err
 	}
 
-    // 注册前端托管静态数据
-    if err = m.baseCfg.HTTPHandlerFrontend(mux, public.Assets); err != nil {
-        return err
-    }
+	// 注册前端托管静态数据
+	if err = m.baseCfg.HTTPHandlerFrontend(mux, public.Assets); err != nil {
+		return err
+	}
 
 	// 这里添加其他自定义实现
 	if err := m.privateHTTPHandle(mux); err != nil {
