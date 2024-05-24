@@ -41,6 +41,11 @@ func (t *templateService) Generate() error {
 			return err
 		}
 
+		// 过滤掉目录，如："."
+		if d.IsDir() {
+			return nil
+		}
+
 		content, err := Assets.ReadFile(filePath)
 		if err != nil {
 			return err
