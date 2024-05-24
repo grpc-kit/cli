@@ -44,7 +44,7 @@ spec:
         readinessProbe:
           failureThreshold: 3
           httpGet:
-            path: /api/healthz?service=_SERVICE_CODE_
+            path: /ping
             port: 10080
             scheme: HTTP
           initialDelaySeconds: 15

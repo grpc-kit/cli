@@ -6,7 +6,7 @@ metadata:
   #  nginx.ingress.kubernetes.io/proxy-body-size: 10m
   name: _APPNAME_
 spec:
-  ingressClassName: nginx
+  #ingressClassName: nginx
   rules:
   - host: _APPNAME_._KUBERNETES_NAMESPACE_._KUBERNETES_CLUSTER_DOMAIN_
     http:

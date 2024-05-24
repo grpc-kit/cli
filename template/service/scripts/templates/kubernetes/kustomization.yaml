@@ -17,6 +17,15 @@ configMapGenerator:
   options:
     disableNameSuffixHash: true
 
+#secretGenerator:
+#  - name: git-lmq-io-tls
+#    files:
+#      - tls.crt=config/tls/app.pem
+#      - tls.key=config/tls/app.key
+#    type: "kubernetes.io/tls"
+#    options:
+#      disableNameSuffixHash: true
+
 replicas:
 - name: _APPNAME_
   count: 1
