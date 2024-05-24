@@ -70,13 +70,16 @@ spec:
           readOnlyRootFilesystem: true
           capabilities:
             drop:
-            - NET_ADMIN
-            - SYS_ADMIN
-            - NET_RAW
+            - ALL
+            #- NET_ADMIN
+            #- SYS_ADMIN
+            #- NET_RAW
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext:
+        seccompProfile:
+          type: RuntimeDefault
         runAsGroup: 65534
         runAsUser: 65534
         runAsNonRoot: true
