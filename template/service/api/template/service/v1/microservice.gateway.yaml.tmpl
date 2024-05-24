@@ -1,0 +1,21 @@
+type: google.api.Service
+config_version: 3
+
+http:
+  rules:
+  - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
+    get: "/api/healthz"
+
+  - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
+    post: "/api/demo"
+    body: "*"
+    response_body: "pong"
+    additional_bindings:
+      - get: "/api/demo"
+      - get: "/api/demo/{uuid}"
+        response_body: "pong.pong"
+      - put: "/api/demo/{uuid}"
+        body: "ping"
+        response_body: "ping"
+      - delete: "/api/demo/{uuid}"
+        response_body: "empty"

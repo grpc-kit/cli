@@ -1,0 +1,137 @@
+default:
+  # TODO；根据具体情况选择运行的 runner 标签
+  tags:
+    - grpc-kit
+  # TODO; 依赖文件注意使用缓存，避免每次下载
+  #cache:
+  #  paths:
+  #    - /go/pkg/mod/
+  # 框架使用的构建镜像
+  image: ccr.ccs.tencentyun.com/grpc-kit/cli:{{ .Global.ReleaseVersion }}
+
+# 默认全局变量
+variables:
+  CGO_ENABLED: "0"
+  GIT_SSL_NO_VERIFY: "true"
+  GO111MODULE: "on"
+  GOPROXY: "https://goproxy.cn"
+  GOSUMDB: "sum.golang.google.cn"
+  #GOPRIVATE: "https://example.com"
+
+# 流水线各阶段
+stages:
+  - pre
+  - test
+  - build
+  - deploy
+  - production
+
+# 代码风格、格式检测
+go-lint:
+  stage: pre
+  script:
+    - make lint
+
+# 依赖的相关依赖的组件
+check-dep:
+  stage: pre
+  script:
+    - which go
+    - which protoc
+    - which protoc-gen-go
+    - which protoc-gen-go-grpc
+    - which protoc-gen-grpc-gateway
+    - which protoc-gen-openapiv2
+
+# 业务单元测试
+unit-tests:
+  stage: test
+  needs:
+    - go-lint
+    - check-dep
+  script:
+    - make test
+
+# 代码覆盖率
+coverage:
+  stage: test
+  script:
+    - go test ./... -timeout 3m -v -gcflags=-l -cover=true -coverprofile=coverage.txt -covermode count
+    - cat coverage.txt
+
+# 生成发送测试报告
+reports:
+  stage: test
+  needs:
+    - unit-tests
+    - coverage
+  script:
+    - echo "pass"
+
+# 编译二进制文件
+binary-local:
+  stage: build
+  needs:
+    - reports
+  script:
+    - make build
+  artifacts:
+    paths:
+      - build/
+    expire_in: 24h
+  when: manual
+  allow_failure: false
+
+# 发布容器至默认镜像中心
+container-registry:
+  stage: build
+  needs:
+    - binary-local
+  script:
+    - source scripts/env
+    - export VERSION=$(cat VERSION)
+    - echo ${CI_REGISTRY_PASSWORD} | docker login ${CI_REGISTRY} -u ${CI_REGISTRY_USER} --password-stdin
+    - /kaniko/executor --dockerfile ${CI_PROJECT_DIR}/Dockerfile --context ${CI_PROJECT_DIR} --destination ${CI_REGISTRY_IMAGE}:${VERSION}
+
+# 打成各种安装包，如：tar、rpm、deb
+release-package:
+  stage: build
+  needs:
+    - binary-local
+  script:
+    - echo "package tar"
+    - echo "package rpm"
+    - echo "package deb"
+  artifacts:
+    paths:
+      - build/
+    expire_in: 24h
+
+# 部署测试环境
+env-test:
+  stage: deploy
+  needs:
+    - release-package
+    - container-registry
+  script:
+    - echo "deploy test"
+
+# 部署准线上环境
+env-staging:
+  stage: production
+  needs:
+    - env-test
+  script:
+    - echo "deploy staging"
+
+# 部署正式环境，手工确认
+env-prod:
+  stage: production
+  needs:
+    - env-staging
+  script:
+    - echo "deploy production"
+  only:
+    - main
+  when: manual
+  allow_failure: false

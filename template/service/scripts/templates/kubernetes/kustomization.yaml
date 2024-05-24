@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: _KUBERNETES_NAMESPACE_
+
+commonLabels:
+  _KUBERNETES_LABEL_PREFIX_/appname: _APPNAME_
+  _KUBERNETES_LABEL_PREFIX_/pm2-uuid: _KUBERNETES_PM2_UUID_
+
+commonAnnotations:
+  _KUBERNETES_LABEL_PREFIX_/pm2-uuid: _KUBERNETES_PM2_UUID_
+
+configMapGenerator:
+- name: _APPNAME_
+  files:
+  - app.yaml=config/configmap/app.yaml
+  options:
+    disableNameSuffixHash: true
+
+replicas:
+- name: _APPNAME_
+  count: 1
+
+resources:
+- service/ingresses.yaml
+- service/services.yaml
+- workloads/deployments/_APPNAME_.yaml
+
+images:
+- name: _CI_REGISTRY_IMAGE_
+  newTag: _DOCKER_IMAGE_VERSION_

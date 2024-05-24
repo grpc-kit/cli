@@ -1,0 +1,20 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  #annotations:
+  #  nginx.ingress.kubernetes.io/proxy-body-size: 10m
+  name: _APPNAME_
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: _APPNAME_._KUBERNETES_NAMESPACE_._KUBERNETES_CLUSTER_DOMAIN_
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: _APPNAME_
+            port:
+              number: 10080
+        pathType: Prefix
