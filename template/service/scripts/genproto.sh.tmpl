@@ -30,7 +30,7 @@ protoc \
     --openapiv2_opt disable_service_tags=true \
     --openapiv2_opt grpc_api_configuration=./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.gateway.yaml \
     --openapiv2_opt openapi_configuration=./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.openapiv2.yaml \
-    --openapiv2_out ./ \
+    --openapiv2_out=json_names_for_fields=false:./ \
     ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.proto
 
 # 移动生成的 microservice.swagger.json 文件
