@@ -6,6 +6,7 @@ import (
     "context"
 
     pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
+    "{{ .Global.Repository }}/internal/security"
     "{{ .Global.Repository }}/public"
     "google.golang.org/grpc/health"
     "google.golang.org/grpc/health/grpc_health_v1"
@@ -21,6 +22,11 @@ func (m *Microservice) Register(ctx context.Context) error {
     if err != nil {
         return err
     }
+
+	// 注册访问安全策略
+	if err = m.baseCfg.SecurityPolicyLoad(ctx, security.Assets); err != nil {
+		return err
+	}
 
     // 注册前端托管静态数据
     if err = m.baseCfg.HTTPHandlerFrontend(mux, public.Assets); err != nil {

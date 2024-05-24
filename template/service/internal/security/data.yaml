@@ -1,0 +1,23 @@
+action: ALLOW
+policies:
+  "admin":
+    permissions:
+      - any: true
+    principals:
+      - metadata:
+        filter: envoy.filters.http.jwt_authn
+        path:
+          - key: payload
+          - key: groups
+        value:
+          string_match:
+          exact:  admin
+
+  "guest":
+    permissions:
+      - not_rule:
+          url_path:
+            path:
+              exact: "/admin"
+    principals:
+      - any: true
