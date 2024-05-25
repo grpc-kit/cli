@@ -1,0 +1,19 @@
+[Unit]
+After=network-online.target
+Documentation=http://(app.yaml:services.http_address)/openapi-spec/
+Description=The _SERVICE_CODE_ microservice. For more API detailed, please refer to the docs
+
+[Service]
+Type=simple
+User=nobody
+Restart=always
+RestartSec=15s
+TimeoutSec=60s
+LimitNOFILE=65535
+KillMode=control-group
+MemoryLimit=2048M
+ExecStart=/usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/service --config /usr/local/_PRODUCT_CODE_/_SHORT_NAME_/_API_VERSION_/config/app.yaml
+
+[Install]
+Alias=_APPNAME_.service
+WantedBy=multi-user.target

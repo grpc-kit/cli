@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+// 根据具体的微服务名称做更改
+package {{ .Global.ProtoPackage }};
+
+option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
+
+// 引入 google 公共类型
+import "google/protobuf/empty.proto";
+
+// 引入第三方依赖的 proto 文件
+import "github.com/grpc-kit/api/known/example/v1/example.proto";
+
+// DemoRequest Demo 方法请求可使用的接口参数
+message DemoRequest {
+  // UUID 资源编号
+  string uuid = 1;
+
+  // Ping 资源内容
+  grpc_kit.api.known.example.v1.ExampleRequest ping = 2;
+}
+
+// DemoResponse Demo方法响应的具体内容
+message DemoResponse {
+
+  message Pong {
+    // UUID 资源编号
+    string uuid = 1;
+
+    // Pong 单个资源响应内容
+    grpc_kit.api.known.example.v1.ExampleResponse pong = 2;
+  }
+
+  // Pong 返回创建的资源
+  Pong pong = 1;
+
+  // Content 多个资源响应内容（无分页属性）
+  repeated grpc_kit.api.known.example.v1.ExampleResponse content = 2;
+
+  // Ping 返回更新的资源
+  grpc_kit.api.known.example.v1.ExampleResponse ping = 3;
+
+  // Empty 返回空的内容
+  google.protobuf.Empty empty = 4;
+}

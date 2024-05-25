@@ -1,0 +1,36 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories
+vendor/
+
+# Config file and certificate
+config/*.pem
+config/*.crt
+config/*.key
+config/*.bak
+config/app-dev-*.yaml
+config/app-test-*.yaml
+config/app-prod-*.yaml
+
+# Frontend web ui
+web/admin/node_modules
+web/webroot/node_modules
+public/openapi/microservice.swagger.json
+
+# Others
+.swp
+.bak
+.idea/
+build/
+backup/

@@ -1,0 +1,156 @@
+pipeline {
+  agent {
+    kubernetes {
+      // TODO；目标集群，由系统管理员确认
+      cloud 'dev'
+      inheritFrom 'grpc'
+      defaultContainer 'build'
+    }
+  }
+
+  parameters {
+    booleanParam(name: 'CI_BIZ_CODE_BUILD', defaultValue: true, description: '是否构建镜像，取消则直接至 k8s yaml 更新')
+    booleanParam(name: 'CI_PIPELINE_SILENCE', defaultValue: false, description: '执行流水线全程静默无需二次确认')
+    choice(name: 'CI_REGISTRY_HOSTNAME', choices: ['ccr.ccs.tencentyun.com'], description: '支持的镜像中心列表')
+    choice(name: 'CI_REGISTRY_NAMESPACE', choices: ['{{ .Global.ProductCode }}'], description: '支持的镜像中心列表')
+    choice(name: 'DEPLOY_ENV', choices: ['dev', 'test', 'staging', 'prod'], description: '应用部署到具体的环境')
+  }
+
+  environment {
+    BUILD_ENV = "remote"
+    GOPROXY = "https://goproxy.cn"
+    CI_BIZ_BRANCH_NAME = "main"
+    CI_BIZ_GROUP_APPID = "{{ .Global.ProductCode }}"
+    CI_BIZ_REPO_URL = "https://{{ .Global.Repository }}.git"
+    CI_OPS_REPO_URL = "https://{{ .Global.Repository }}.git"
+    CI_BIZ_REPO_AUTH = "biz-group-appid-${CI_BIZ_GROUP_APPID}"
+    CI_OPS_REPO_AUTH  = "biz-group-appid-${CI_BIZ_GROUP_APPID}"
+    KUBERNETES_LABEL_PREFIX = "{{ .Global.APIEndpoint }}"
+    KUBERNETES_NAMESPACE = "biz-${DEPLOY_ENV}-${CI_BIZ_GROUP_APPID}"
+    KUBERNETES_PM2_UUID = "00000000-0000-0000-0000-000000000000"
+    KUBERNETES_YAML_DIRECTORY = "deploy/kubernetes/${DEPLOY_ENV}/"
+    KUBERNETES_CLUSTER_DOMAIN = "{{ .Global.APIEndpoint }}"
+  }
+
+  options {
+    disableConcurrentBuilds(abortPrevious: true)
+    disableResume()
+    timeout(time: 1, unit: 'HOURS')
+  }
+
+  stages {
+    stage('Prepare') {
+      when {
+        environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
+      }
+
+      steps {
+        checkout scmGit(
+          branches: [
+            [name: CI_BIZ_BRANCH_NAME]
+          ],
+          extensions: [
+            [$class: 'RelativeTargetDirectory', relativeTargetDir: 'source']
+          ],
+          userRemoteConfigs: [
+            [
+              credentialsId: CI_BIZ_REPO_AUTH,
+              url: CI_BIZ_REPO_URL
+            ]
+          ]
+        )
+
+        // 执行代码检查
+        sh '''
+           cd source
+           make protoc
+           make lint
+        '''
+      }
+    }
+
+    stage('Test') {
+      when {
+        environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
+      }
+
+      steps {
+        // 执行单元测试等
+        sh '''
+           cd source
+           make test
+        '''
+      }
+    }
+
+    stage('Build') {
+      when {
+        environment name: 'CI_BIZ_CODE_BUILD', value: 'true'
+      }
+
+      steps {
+        // 选择特定语言容器，执行代码编译
+        container('build') {
+          sh '''
+             cd source
+             make build
+             make manifests TEMPLATES=dockerfile
+             make manifests TEMPLATES=kubernetes TEMPLATE_PATH=../gitops/${KUBERNETES_YAML_DIRECTORY}
+          '''
+        }
+
+        // 选择 kaniko 容器，执行构建镜像并上传
+        container('kaniko') {
+          sh '''
+             cd source
+             ./scripts/kaniko.sh
+          '''
+        }
+      }
+    }
+
+    stage('Confirm') {
+      when {
+        environment name: 'CI_PIPELINE_SILENCE', value: 'false'
+      }
+
+      steps {
+        container('kcli') {
+          sh '''
+            cd gitops/${KUBERNETES_YAML_DIRECTORY}
+            cat kustomization.yaml
+          '''
+        }
+
+        input "请查看配置，确认是否可以部署？"
+      }
+    }
+
+    stage('Production') {
+      steps {
+        container('kcli') {
+          withCredentials([gitUsernamePassword(credentialsId: CI_OPS_REPO_AUTH, gitToolName: 'git-tool')]) {
+            wrap([$class: 'BuildUser']) {
+              sh '''
+                 cd gitops/
+                 ./scripts/kcli.sh commit
+              '''
+            }
+
+            sh '''
+               cd gitops/
+               ./scripts/kcli.sh apply
+            '''
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      // TODO；根据实际情况调用接口推送通知
+      echo "Send notifications for result: ${currentBuild.result}"
+    }
+  }
+}

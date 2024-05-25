@@ -1,0 +1,85 @@
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
+    _ "google.golang.org/grpc/health"
+    "google.golang.org/grpc/health/grpc_health_v1"
+
+    statusv1 "github.com/grpc-kit/pkg/api/known/status/v1"
+    pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
+)
+
+var serviceConfig = "{\"loadBalancingPolicy\": \"round_robin\",\"healthCheckConfig\": {\"serviceName\": \"\"}}"
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+    defer cancel()
+
+    var err error
+    cc, err := grpcConn(ctx)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+
+    if err = grpcHealth(ctx, cc); err != nil {
+        fmt.Println(err)
+        return
+    } else {
+        fmt.Println("grpc_health_v1 check ok")
+    }
+
+    if err = grpcHealthPrivate(ctx, cc); err != nil {
+        fmt.Println(err)
+        return
+    } else {
+        fmt.Println("grpc health private check ok")
+    }
+}
+
+func grpcConn(ctx context.Context) (*grpc.ClientConn, error) {
+    // TODO; 仅用于测试，配置为该服务对外的地址
+    cc, err := grpc.DialContext(ctx, "127.0.0.1:10081",
+        grpc.WithTransportCredentials(insecure.NewCredentials()),
+        grpc.WithDefaultServiceConfig(serviceConfig))
+    if err != nil {
+        return nil, err
+    }
+
+    return cc, err
+}
+
+// grpcHealth 利用标准 grpc 健康检测
+func grpcHealth(ctx context.Context, cc *grpc.ClientConn) error {
+    c := grpc_health_v1.NewHealthClient(cc)
+    resp, err := c.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
+    if err != nil {
+        return err
+    }
+
+    if resp.GetStatus().String() != "SERVING" {
+        return fmt.Errorf("grpc_health_v1 check fail, val: %v", resp.GetStatus().String())
+    }
+
+    return err
+}
+
+// grpcHealthPrivate 服务内自定义健康检测
+func grpcHealthPrivate(ctx context.Context, cc *grpc.ClientConn) error {
+    c := pb.New{{ .Global.ServiceTitle }}Client(cc)
+    resp, err := c.HealthCheck(ctx, &statusv1.HealthCheckRequest{Service: "{{ .Global.ShortName }}.{{ .Template.Service.APIVersion }}.{{ .Global.ProductCode }}"})
+    if err != nil {
+        return err
+    }
+
+    if resp.GetStatus().String() != "SERVING" {
+        return fmt.Errorf("grpc health private check fail")
+    }
+
+    return nil
+}

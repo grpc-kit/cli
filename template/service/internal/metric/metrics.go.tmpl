@@ -1,0 +1,31 @@
+package metric
+
+import (
+    "context"
+
+    "go.opentelemetry.io/otel"
+    "go.opentelemetry.io/otel/metric"
+)
+
+var meter = otel.Meter("{{ .Global.Repository }}")
+
+var (
+    testHello metric.Float64Counter
+)
+
+func init() {
+    var err error
+
+    testHello, err = meter.Float64Counter(
+        "test.hello",
+        metric.WithDescription("a test metrics"),
+    )
+    if err != nil {
+        panic(err)
+    }
+}
+
+// Test 用于示例测试，提供给外部调用变更指标值
+func Test(ctx context.Context, val float64) {
+    testHello.Add(ctx, val)
+}
