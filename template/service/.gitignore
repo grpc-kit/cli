@@ -18,9 +18,10 @@ vendor/
 config/*.pem
 config/*.crt
 config/*.key
-config/app-dev-*
-config/app-test-*
-config/app-prod-*
+config/*.bak
+config/app-dev-*.yaml
+config/app-test-*.yaml
+config/app-prod-*.yaml
 
 # Frontend web ui
 web/admin/node_modules
