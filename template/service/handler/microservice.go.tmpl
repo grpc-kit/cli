@@ -52,12 +52,13 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
     m.server = server
 
     // 其他个性扩展逻辑
-    if err := m.privateExtended(); err != nil {
+    opts, err := m.privateExtended()
+    if err != nil {
         return m, err
     }
 
     // 自定义配置初始化
-    if err := m.thisCfg.Init(); err != nil {
+    if err = m.thisCfg.Init(opts...); err != nil {
         return m, err
     }
 

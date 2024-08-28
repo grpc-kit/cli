@@ -1,0 +1,55 @@
+package modeler
+
+import (
+	"context"
+	entsql "entgo.io/ent/dialect/sql"
+	"github.com/sirupsen/logrus"
+
+	"{{ .Global.Repository }}/modeler/ent"
+)
+
+// IndependentCfg 个性配置
+type IndependentCfg struct {
+	logger *logrus.Entry
+	db     *ent.Client
+
+	Name string `mapstructure:"name"`
+}
+
+type ClientIndependentOption func(cfg *IndependentCfg)
+
+func WithLogger(logger *logrus.Entry) ClientIndependentOption {
+	return func(cfg *IndependentCfg) {
+		cfg.logger = logger
+	}
+}
+
+func WithDatabaseEntDriver(driver *entsql.Driver) ClientIndependentOption {
+	return func(cfg *IndependentCfg) {
+		client := ent.NewClient(ent.Driver(driver))
+		cfg.db = client
+	}
+}
+
+// Init 用于初始化实例
+func (i *IndependentCfg) Init(opts ...ClientIndependentOption) error {
+	ctx := context.Background()
+
+	for _, opt := range opts {
+		opt(i)
+	}
+
+	if i.db != nil {
+		if err := i.db.Schema.Create(ctx); err != nil {
+			return err
+		}
+	}
+
+	// TODO; 其他业务代码
+
+	return nil
+}
+
+func (i *IndependentCfg) GetEntClient() (*ent.Client, error) {
+	return i.db, nil
+}
