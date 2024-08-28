@@ -5,9 +5,11 @@ import (
 	"net/http"
 
 	"google.golang.org/grpc"
+
+	"{{ .Global.Repository }}/modeler"
 )
 
-func (m *Microservice) privateExtended() error {
+func (m *Microservice) privateExtended() ([]modeler.ClientIndependentOption, error) {
 	clientOpts := m.baseCfg.GetClientDialOption()
 	clientUnaryHandlers := m.baseCfg.GetClientUnaryInterceptor()
 	clientStreamHandlers := m.baseCfg.GetClientStreamInterceptor()
@@ -19,7 +21,15 @@ func (m *Microservice) privateExtended() error {
 	m.server.UseServerOption(m.baseCfg.GetUnaryInterceptor(m.privateUnaryServerInterceptor()...),
 		m.baseCfg.GetStreamInterceptor(m.privateStreamServerInterceptor()...))
 
-	return nil
+	idpOpts := make([]modeler.ClientIndependentOption, 0)
+	idpOpts = append(idpOpts, modeler.WithLogger(m.logger))
+
+	driver, err := m.baseCfg.GetDatabaseEntSQLDriver()
+	if err == nil && driver != nil {
+		idpOpts = append(idpOpts, modeler.WithDatabaseEntDriver(driver))
+	}
+
+	return idpOpts, nil
 }
 
 func (m *Microservice) privateUnaryServerInterceptor() []grpc.UnaryServerInterceptor {
