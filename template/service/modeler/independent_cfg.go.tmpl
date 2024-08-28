@@ -2,6 +2,8 @@ package modeler
 
 import (
 	"context"
+	"fmt"
+
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/sirupsen/logrus"
 
@@ -16,14 +18,17 @@ type IndependentCfg struct {
 	Name string `mapstructure:"name"`
 }
 
+// ClientIndependentOption 用户自定义初始化资源选项
 type ClientIndependentOption func(cfg *IndependentCfg)
 
+// WithLogger 传递日志实例
 func WithLogger(logger *logrus.Entry) ClientIndependentOption {
 	return func(cfg *IndependentCfg) {
 		cfg.logger = logger
 	}
 }
 
+// WithDatabaseEntDriver 传递 ent 数据库实例
 func WithDatabaseEntDriver(driver *entsql.Driver) ClientIndependentOption {
 	return func(cfg *IndependentCfg) {
 		client := ent.NewClient(ent.Driver(driver))
@@ -50,6 +55,11 @@ func (i *IndependentCfg) Init(opts ...ClientIndependentOption) error {
 	return nil
 }
 
+// GetEntClient 获取 ent 数据库实例
 func (i *IndependentCfg) GetEntClient() (*ent.Client, error) {
+	if i.db == nil {
+		return nil, fmt.Errorf("ent client is nil")
+	}
+
 	return i.db, nil
 }
