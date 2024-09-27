@@ -50,9 +50,9 @@ generate: precheck ## Generate code from proto files.
 	@echo ">> generation release version"
 	@./scripts/version.sh update
 	@echo ">> generation code from proto files"
-	@./scripts/genproto.sh
+	@./scripts/generate.sh
 	@echo ">> generation database schema"
-	@go generate ./modeler/ent/
+	@./scripts/generate.sh gen_ent
 
 .PHONY: lint
 lint: generate ## Run go fmt and vet against code.

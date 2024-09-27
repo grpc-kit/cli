@@ -2,8 +2,9 @@
 
 source scripts/env
 
-# 生成 *.pb.go 文件
-protoc \
+function gen_protoc() {
+  # 生成 *.pb.go 文件
+  protoc \
     -I ./ \
     -I /usr/local/include/ \
     -I "${GOPATH}"/src \
@@ -16,8 +17,8 @@ protoc \
     --go-grpc_out ./ \
     ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/*.proto
 
-# 生成 *.pb.gw.go 与 swagger 接口文档
-protoc \
+  # 生成 *.pb.gw.go 与 swagger 接口文档
+  protoc \
     -I ./ \
     -I /usr/local/include/ \
     -I "${GOPATH}"/src \
@@ -33,7 +34,19 @@ protoc \
     --openapiv2_out=json_names_for_fields=false:./ \
     ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.proto
 
-# 移动生成的 microservice.swagger.json 文件
-if test -f ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json; then
-  mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/openapi/
+  # 移动生成的 microservice.swagger.json 文件
+  if test -f ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json; then
+    mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/openapi/
+  fi
+}
+
+function gen_ent() {
+  # 因 "go generate" 会继承 "GOOS" 与 "GOARCH" 变量，如在交叉编译环境则可能无法运行
+  GOOS=${GOHOSTOS} GOARCH=${GOHOSTARCH} go generate ./modeler/ent/
+}
+
+if test -z $1; then
+  gen_protoc
+else
+  $1
 fi
