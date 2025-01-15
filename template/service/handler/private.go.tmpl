@@ -29,6 +29,15 @@ func (m *Microservice) privateExtended() ([]modeler.ClientIndependentOption, err
 		idpOpts = append(idpOpts, modeler.WithDatabaseEntDriver(driver))
 	}
 
+	if m.baseCfg.Automations.Enable {
+		fcc, err := m.baseCfg.GetFlowClientConfig()
+		if err != nil {
+			return idpOpts, err
+		}
+
+		idpOpts = append(idpOpts, modeler.WithWorkflow(m.logger, fcc))
+	}
+
 	return idpOpts, nil
 }
 

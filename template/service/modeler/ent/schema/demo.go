@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/schema"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/mixin"
 )
 
 // Demo holds the schema definition for the Demo entity.
@@ -22,6 +23,13 @@ func (Demo) Fields() []ent.Field {
 // Edges of the Demo.
 func (Demo) Edges() []ent.Edge {
 	return nil
+}
+
+// Mixin of the Demo.
+func (Demo) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixin.Time{},
+	}
 }
 
 // Annotations 自定义表名

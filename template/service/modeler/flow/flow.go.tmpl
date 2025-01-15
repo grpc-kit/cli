@@ -1,0 +1,35 @@
+package flow
+
+import (
+	"context"
+
+	"github.com/grpc-kit/pkg/cfg"
+	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/dynamic"
+)
+
+// Client xx
+type Client struct {
+	logger     *logrus.Entry
+	config     *cfg.FlowClientConfig
+	dynamicset *dynamic.DynamicClient
+}
+
+// NewClient returns a new Workflow
+func NewClient(logger *logrus.Entry, fcc *cfg.FlowClientConfig) (*Client, error) {
+	dynamicset, err := dynamic.NewForConfig(fcc.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		logger:     logger,
+		config:     fcc,
+		dynamicset: dynamicset,
+	}, nil
+}
+
+// Create xx
+func (w *Client) Create(ctx context.Context) error {
+	return nil
+}
