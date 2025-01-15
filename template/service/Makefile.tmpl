@@ -19,7 +19,8 @@ BUILD_DATE      := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE     := $(shell git --no-pager log -1 --format='%ct' 2>/dev/null)
 PREFIX_VERSION  := $(shell ./scripts/version.sh prefix)
 RELEASE_VERSION ?= $(shell ./scripts/version.sh release)
-BUILD_LD_FLAGS  := "-X 'github.com/grpc-kit/pkg/vars.Appname={{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}' \
+BUILD_LD_FLAGS  := "-s -w \
+                -X 'github.com/grpc-kit/pkg/vars.Appname={{ .Global.ProductCode }}-{{ .Global.ShortName }}-{{ .Template.Service.APIVersion }}' \
                 -X 'github.com/grpc-kit/pkg/vars.CliVersion=${CLI_VERSION}' \
                 -X 'github.com/grpc-kit/pkg/vars.GitCommit=${GIT_COMMIT}' \
                 -X 'github.com/grpc-kit/pkg/vars.GitBranch=${GIT_BRANCH}' \
