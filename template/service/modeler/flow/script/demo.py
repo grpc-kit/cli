@@ -11,6 +11,7 @@
 
 import sys
 import logging
+import traceback
 from typing import List
 
 # 配置日志
@@ -45,5 +46,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        logging.warning("出现异常")
+        logging.error("出现异常: %s", e)
+        logging.error("堆栈信息:\n%s", traceback.format_exc())
         sys.exit(1)
