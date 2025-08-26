@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	entsql "entgo.io/ent/dialect/sql"
-	"github.com/grpc-kit/pkg/cfg"
 	"github.com/sirupsen/logrus"
 
 	"{{ .Global.Repository }}/modeler/ent"
@@ -19,38 +17,6 @@ type IndependentCfg struct {
 	flow   *flow.Client
 
 	Name string `mapstructure:"name"`
-}
-
-// ClientIndependentOption 用户自定义初始化资源选项
-type ClientIndependentOption func(cfg *IndependentCfg)
-
-// WithLogger 传递日志实例
-func WithLogger(logger *logrus.Entry) ClientIndependentOption {
-	return func(cfg *IndependentCfg) {
-		cfg.logger = logger
-	}
-}
-
-// WithDatabaseEntDriver 传递 ent 数据库实例
-func WithDatabaseEntDriver(driver *entsql.Driver) ClientIndependentOption {
-	return func(cfg *IndependentCfg) {
-		client := ent.NewClient(ent.Driver(driver))
-		cfg.db = client
-	}
-}
-
-// WithWorkflow 传递流水线配置
-func WithWorkflow(logger *logrus.Entry, fcc *cfg.FlowClientConfig) ClientIndependentOption {
-	return func(cfg *IndependentCfg) {
-		if fcc != nil {
-			client, err := flow.NewClient(logger, fcc)
-			if err != nil {
-				panic(err)
-			}
-
-			cfg.flow = client
-		}
-	}
 }
 
 // Init 用于初始化实例
