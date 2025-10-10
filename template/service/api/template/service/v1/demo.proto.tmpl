@@ -11,6 +11,9 @@ import "google/protobuf/empty.proto";
 // 引入第三方依赖的 proto 文件
 import "github.com/grpc-kit/api/known/example/v1/example.proto";
 
+// 同服务内的 proto 文件使用相对路径引用，既不包含代码仓库前缀
+import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.common.proto";
+
 // DemoRequest Demo 方法请求可使用的接口参数
 message DemoRequest {
   // UUID 资源编号
@@ -22,15 +25,6 @@ message DemoRequest {
 
 // DemoResponse Demo方法响应的具体内容
 message DemoResponse {
-
-  message Pong {
-    // UUID 资源编号
-    string uuid = 1;
-
-    // Pong 单个资源响应内容
-    grpc_kit.api.known.example.v1.ExampleResponse pong = 2;
-  }
-
   // Pong 返回创建的资源
   Pong pong = 1;
 

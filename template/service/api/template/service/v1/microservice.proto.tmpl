@@ -5,6 +5,7 @@ package {{ .Global.ProtoPackage }};
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
 // 同服务内的 proto 文件使用相对路径引用，既不包含代码仓库前缀
+//import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.common.proto";
 import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
 
 // 引入依赖的外部 proto 文件

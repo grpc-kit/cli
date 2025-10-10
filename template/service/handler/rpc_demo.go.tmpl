@@ -25,7 +25,7 @@ func (m *Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoR
         Ping: &examplev1.ExampleResponse{},
         // POST /api/demo
         // GET /api/demo/{uuid}
-        Pong: &pb.DemoResponse_Pong{
+        Pong: &pb.Pong{
             Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
             Pong: &examplev1.ExampleResponse{},
         },
