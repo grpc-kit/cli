@@ -3,9 +3,35 @@ config_version: 3
 
 http:
   rules:
+  # 内置服务
+  ## 健康检查
   - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.HealthCheck
     get: "/api/healthz"
 
+  # 参考示例，书籍管理，实现相同一组任务的方法整合在一起，前后均需空行隔开
+  ## 获取书籍详情
+  #- selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.GetBook
+  #  get: "/api/publishers/{publisher_id}/books/{book_id}"
+  ## 获取书籍列表
+  #- selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.ListBooks
+  #  get: "/api/publishers/{publisher_id}/books"
+  ## 创建书籍实体
+  #- selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.CreateBook
+  #  post: "/api/publishers/{publisher_id}/books"
+  #  body: "book"
+  ## 更新书籍实体
+  #- selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.UpdateBook
+  #  patch: "/api/publishers/{publisher_id}/books/{book_id}"
+  #  body: "book"
+  ## 删除书籍实体
+  #- selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.DeleteBook
+  #  delete: "/api/publishers/{publisher_id}/books/{book_id}"
+  ## 归档书籍实体
+  #- selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.ArchiveBook
+  #  post: "/api/publishers/{publisher_id}/books/{book_id}:archive"
+  #  body: "*"
+
+  # 示例实现
   - selector: {{ .Global.ProtoPackage }}.{{ .Global.ServiceTitle }}.Demo
     post: "/api/demo"
     body: "*"

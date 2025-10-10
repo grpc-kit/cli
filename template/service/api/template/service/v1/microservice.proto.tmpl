@@ -12,6 +12,20 @@ import "github.com/grpc-kit/api/known/status/v1/response.proto";
 
 // 该微服务支持的 RPC 方法定义
 service {{ title .Global.ServiceTitle }} {
+  // 内置服务，健康检查
   rpc HealthCheck(grpc_kit.api.known.status.v1.HealthCheckRequest) returns (grpc_kit.api.known.status.v1.HealthCheckResponse) {}
+
+  // 参考示例，书籍管理，实现相同一组任务的方法整合在一起，前后均需空行隔开
+  // rpc GetBook(GetBookRequest) returns (Book) {}
+  // rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {}
+  // rpc CreateBook(CreateBookRequest) returns (Book) {}
+  // rpc UpdateBook(CreateBookRequest) returns (Book) {}
+  // rpc DeleteBook(DeleteBookRequest) returns (google.protobuf.Empty) {}
+  // rpc ArchiveBook(ArchiveBookRequest) returns (ArchiveBookResponse) {}
+
+  // 示例实现，可以删除
   rpc Demo(DemoRequest) returns (DemoResponse) {}
+
+  // xx 管理，实现相同一组任务的方法整合在一起
+  // ...
 }
