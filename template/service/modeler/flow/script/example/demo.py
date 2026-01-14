@@ -51,6 +51,10 @@ def main() -> None:
     logging.info("处理结果: %s", result)
 
 if __name__ == "__main__":
+    # 全局变量定义，使用大写
+    API_ENDPOINT = ""
+    API_TOKEN = ""
+
     try:
         main()
     except Exception as e:
