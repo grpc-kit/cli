@@ -1,0 +1,97 @@
+package example
+
+/*
+import (
+	"fmt"
+
+	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+	"github.com/grpc-kit/pkg/cfg"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+
+	{{ .Global.Repository }}/modeler/flow/script
+)
+
+// ExampleShell xx
+type ExampleShell struct {
+	config   *cfg.FlowClientConfig
+	template *wfv1.WorkflowTemplate
+}
+
+// NewExampleShell xx
+func NewExampleShell(config *cfg.FlowClientConfig) *ExampleShell {
+	t := &wfv1.WorkflowTemplate{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "WorkflowTemplate",
+			APIVersion: "argoproj.io/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%v-example-shell", config.Appname),
+			Namespace: config.Namespace,
+		},
+		Spec: wfv1.WorkflowSpec{
+			Entrypoint:         "main",
+			ServiceAccountName: "executor",
+			Volumes: []corev1.Volume{
+				{
+					Name: "global-tmp",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			},
+			Templates:             []wfv1.Template{},
+			ActiveDeadlineSeconds: ptr.To[int64](3600),
+			ArchiveLogs:           ptr.To[bool](false),
+		},
+	}
+
+	d := &ExampleShell{config: config, template: t}
+	d.initTemplates()
+
+	return d
+}
+
+// Template xx
+func (d *ExampleShell) Template() *wfv1.WorkflowTemplate {
+	return d.template
+}
+
+func (d *ExampleShell) initTemplates() {
+	d.template.Spec.Templates = append(d.template.Spec.Templates, d.mainTemplate())
+	d.template.Spec.Templates = append(d.template.Spec.Templates, d.scriptDemo())
+}
+
+func (d *ExampleShell) mainTemplate() wfv1.Template {
+	return wfv1.Template{
+		Name: "main",
+		DAG: &wfv1.DAGTemplate{
+			Tasks: []wfv1.DAGTask{
+				{
+					Name:     "demo",
+					Template: "demo",
+				},
+			},
+		},
+	}
+}
+
+func (d *ExampleShell) scriptDemo() wfv1.Template {
+	sourceRaw, err := script.Assets.ReadFile("example/demo.sh")
+	if err != nil {
+		panic(err)
+	}
+
+	return wfv1.Template{
+		Name: "demo",
+		Script: &wfv1.ScriptTemplate{
+			Container: corev1.Container{
+				Image:   "ccr.ccs.tencentyun.com/opsaid/minideb:bullseye",
+				Command: []string{"sh"},
+			},
+			Source: string(sourceRaw),
+		},
+	}
+}
+*/

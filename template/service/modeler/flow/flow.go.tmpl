@@ -31,6 +31,15 @@ func NewClient(logger *logrus.Entry, fcc *cfg.FlowClientConfig) (*Client, error)
 
 // Create xx
 func (w *Client) Create(ctx context.Context) error {
+	/*
+		if err := w.sync(ctx,
+			example.NewExampleShell(w.config).Template(),
+			example.NewExamplePython(w.config).Template(),
+		); err != nil {
+			return err
+		}
+	*/
+
 	return nil
 }
 
