@@ -1,0 +1,3 @@
+[submodule "scripts/skills"]
+	path = scripts/skills
+	url = https://github.com/grpc-kit/skills.git

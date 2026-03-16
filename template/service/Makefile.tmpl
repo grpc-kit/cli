@@ -66,6 +66,23 @@ test: generate ## Run unit tests.
 	@${GO} mod tidy
 	@${GO} test ./... -timeout 3m -v -gcflags=-l -cover=true
 
+.PHONY: skills
+skills: ## Install or update grpc-kit common skills.
+	@if [ ! -d ".git" ]; then \
+		echo "==> Initializing git repository..."; \
+		git init; \
+	fi
+	@if [ ! -e "scripts/skills/.git" ]; then \
+		echo "==> scripts/skills not found or not a submodule. Initializing..."; \
+		if [ -d "scripts/skills" ]; then rm -rf scripts/skills; fi; \
+		git submodule add -f https://github.com/grpc-kit/skills.git scripts/skills; \
+		git submodule update --init --recursive; \
+	else \
+		echo "==> scripts/skills exists. Syncing with remote (main)..."; \
+		git submodule update --remote --rebase scripts/skills; \
+	fi
+	@echo "==> Skills are up-to-date."
+
 ##@ Build
 
 .PHONY: build
