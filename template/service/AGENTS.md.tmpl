@@ -78,6 +78,23 @@ make build
 - Keep API versioned under `api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/`; register cross-domain RPCs through `microservice.proto`.
 - For API changes: update `*.proto` plus gateway/openapi configs first, then run `make generate`.
 
+## Git Commit Convention
+
+- All commit messages must follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
+- Use the format: `type(scope)!: short summary`
+- Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+- Use `!` (or a `BREAKING CHANGE:` footer) for breaking changes.
+- Keep the subject concise and imperative; avoid trailing periods.
+
+**Examples:**
+
+- `feat(handler): add batch ipam allocation endpoint`
+- `fix(modeler): handle empty opensearch result safely`
+- `docs(readme): clarify local run prerequisites`
+- `refactor(rpc_search)!: rename query fields for aip compliance`
+
+When a change affects generated artifacts, include source and generated files in the same commit message scope when possible.
+
 ## Generated Files Policy
 
 - Do not manually edit files containing generated headers (for example: `cmd/server/main.go`, `api/${{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/*.pb.go`, `api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.pb.gw.go`).
