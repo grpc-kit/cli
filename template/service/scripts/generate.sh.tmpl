@@ -37,6 +37,7 @@ function gen_protoc() {
   # 移动生成的 microservice.swagger.json 文件
   if test -f ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json; then
     cp ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.gateway.yaml ./public/openapi/
+    cp ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.openapiv2.yaml ./public/openapi/
     mv ./api/${PRODUCT_CODE}/${SHORT_NAME}/${API_VERSION}/microservice.swagger.json ./public/openapi/
   fi
 }
