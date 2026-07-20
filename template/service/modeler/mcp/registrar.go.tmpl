@@ -1,0 +1,187 @@
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+
+	logrus "github.com/sirupsen/logrus"
+
+	mcpserver "github.com/grpc-kit/pkg/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"{{ .Global.Repository }}/modeler/ent"
+	"{{ .Global.Repository }}/modeler/flow"
+)
+
+// 保留 mcpserver 导入以演示「Authorization header 透传」用法（见各 handler 注释示例）。
+// 业务开发者在 handler 中实际调用 mcpserver.AuthHeaderFromContext(ctx) 后可删除此行。
+var _ = mcpserver.AuthHeaderFromContext
+
+// Registrar 持有业务依赖，实现自定义 MCP 资源注册（Tools / Resources / Prompts）。
+// 业务开发者可在此添加 LLM client、RPC client 等依赖字段及对应 With* 选项。
+type Registrar struct {
+	logger *logrus.Entry
+	db     *ent.Client
+	flow   *flow.Client
+}
+
+// RegistrarOption 是 Registrar 的构造选项（Functional Options 模式），
+// 与 modeler.ClientIndependentOption 风格一致。
+type RegistrarOption func(*Registrar)
+
+// NewRegistrar 构造自定义 MCP 资源注册器。
+// 零参数时所有依赖为零值（适用于不依赖 db/flow 的纯计算型资源）；
+// 通过 With* 选项按需注入依赖。
+func NewRegistrar(opts ...RegistrarOption) *Registrar {
+	r := &Registrar{}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
+}
+
+// WithDatabase 注入 ent 数据库客户端
+func WithDatabase(db *ent.Client) RegistrarOption {
+	return func(r *Registrar) { r.db = db }
+}
+
+// WithWorkflow 注入 flow 工作流客户端
+func WithWorkflow(flow *flow.Client) RegistrarOption {
+	return func(r *Registrar) { r.flow = flow }
+}
+
+// WithLogger 注入日志实例
+func WithLogger(logger *logrus.Entry) RegistrarOption {
+	return func(r *Registrar) { r.logger = logger }
+}
+
+// Register 向 SDK MCP Server 注册业务原生 MCP 资源。
+// server 参数为 wrapper.MCPServer() 返回的 SDK 实例，
+// 其上提供 AddTool / AddResource / AddResourceTemplate / AddPrompt 四个方法，按需调用。
+func (r *Registrar) Register(server *sdkmcp.Server) error {
+	// ── Tools ──────────────────────────────────────────
+	// 示例 Tool：echo（业务开发者可替换为实际 Tool）
+	server.AddTool(&sdkmcp.Tool{
+		Name:        "{{ .Global.ShortName }}_echo",
+		Description: "回显输入文本（自定义 MCP Tool 示例）",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"text": map[string]any{
+					"type":        "string",
+					"description": "待回显的文本",
+				},
+			},
+			"required": []string{"text"},
+		},
+	}, r.handleEcho)
+
+	// ── Resources ──────────────────────────────────────
+	// 示例 Resource：服务配置信息（业务开发者可替换为实际 Resource）
+	server.AddResource(&sdkmcp.Resource{
+		URI:         "{{ .Global.ShortName }}://config",
+		Name:        "config",
+		Description: "服务配置信息（自定义 MCP Resource 示例）",
+		MIMEType:    "application/json",
+	}, r.handleReadConfig)
+
+	// ── Prompts ────────────────────────────────────────
+	// 示例 Prompt：问候模板（业务开发者可替换为实际 Prompt）
+	server.AddPrompt(&sdkmcp.Prompt{
+		Name:        "{{ .Global.ShortName }}_greeting",
+		Description: "生成问候语（自定义 MCP Prompt 示例）",
+		Arguments: []*sdkmcp.PromptArgument{
+			{
+				Name:        "name",
+				Description: "被问候者的名称",
+				Required:    true,
+			},
+		},
+	}, r.handleGreeting)
+
+	return nil
+}
+
+// ── Tool Handler ──────────────────────────────────────
+// ToolHandler 签名: func(ctx, *CallToolRequest) (*CallToolResult, error)
+// 客户端调用 tools/call 时触发。注意：req.Params.Arguments 是 json.RawMessage，
+// 需在 handler 内自行 unmarshal（Server.AddTool 不自动解码）。
+
+func (r *Registrar) handleEcho(
+	ctx context.Context, req *sdkmcp.CallToolRequest,
+) (*sdkmcp.CallToolResult, error) {
+	// 取出框架注入的 Authorization header（如需透传给后端 gRPC 调用）：
+	// authHeader := mcpserver.AuthHeaderFromContext(ctx)
+
+	var args struct {
+		Text string `json:"text"`
+	}
+	if len(req.Params.Arguments) > 0 {
+		if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
+			return &sdkmcp.CallToolResult{
+				IsError: true,
+				Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: `{"error":"invalid arguments"}`}},
+			}, nil
+		}
+	}
+
+	if r.logger != nil {
+		r.logger.Debugf("mcp echo tool called: text=%q", args.Text)
+	}
+
+	payload, _ := json.Marshal(map[string]any{"echo": args.Text})
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: string(payload)}},
+	}, nil
+}
+
+// ── Resource Handler ──────────────────────────────────
+// ResourceHandler 签名: func(ctx, *ReadResourceRequest) (*ReadResourceResult, error)
+// 客户端调用 resources/read 时触发，通过 req.Params.URI 获取请求的资源 URI。
+
+func (r *Registrar) handleReadConfig(
+	ctx context.Context, req *sdkmcp.ReadResourceRequest,
+) (*sdkmcp.ReadResourceResult, error) {
+	// 取出框架注入的 Authorization header（如需透传给后端 gRPC 调用）：
+	// authHeader := mcpserver.AuthHeaderFromContext(ctx)
+
+	config := map[string]any{
+		"service": "{{ .Global.ShortName }}",
+		"version": "{{ .Global.ReleaseVersion }}",
+	}
+	payload, _ := json.Marshal(config)
+	return &sdkmcp.ReadResourceResult{
+		Contents: []*sdkmcp.ResourceContents{
+			{
+				URI:      req.Params.URI,
+				MIMEType: "application/json",
+				Text:     string(payload),
+			},
+		},
+	}, nil
+}
+
+// ── Prompt Handler ────────────────────────────────────
+// PromptHandler 签名: func(ctx, *GetPromptRequest) (*GetPromptResult, error)
+// 客户端调用 prompts/get 时触发，通过 req.Params.Arguments 获取模板参数（map[string]string）。
+
+func (r *Registrar) handleGreeting(
+	ctx context.Context, req *sdkmcp.GetPromptRequest,
+) (*sdkmcp.GetPromptResult, error) {
+	// 取出框架注入的 Authorization header（如需透传给后端 gRPC 调用）：
+	// authHeader := mcpserver.AuthHeaderFromContext(ctx)
+
+	name := req.Params.Arguments["name"]
+	return &sdkmcp.GetPromptResult{
+		Description: "问候语模板",
+		Messages: []*sdkmcp.PromptMessage{
+			{
+				// MCP Role 为字符串类型（"user" | "assistant"），SDK 未导出常量
+				Role: "user",
+				Content: &sdkmcp.TextContent{
+					Text: "你好，" + name + "！欢迎使用 {{ .Global.ServiceTitle }} 服务。",
+				},
+			},
+		},
+	}, nil
+}

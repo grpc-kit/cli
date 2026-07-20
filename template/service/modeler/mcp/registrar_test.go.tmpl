@@ -1,0 +1,29 @@
+package mcp
+
+import (
+	"testing"
+
+	mcpserver "github.com/grpc-kit/pkg/mcp"
+)
+
+// TestRegistrar_AllResources 验证示例 Tool / Resource / Prompt 能成功注册到 MCP Server。
+// 示例资源不依赖 db/flow，零参数构造 Registrar。
+func TestRegistrar_AllResources(t *testing.T) {
+	wrapper, err := mcpserver.NewServer(true, "streamable_http")
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
+	}
+	if wrapper == nil {
+		t.Fatal("wrapper is nil")
+	}
+
+	r := NewRegistrar()
+	if err := r.Register(wrapper.MCPServer()); err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// TODO: 通过 SDK session 端到端调用验证（参考 pkg/mcp/integration_test.go）：
+	// - tools/call {{ .Global.ShortName }}_echo
+	// - resources/read {{ .Global.ShortName }}://config
+	// - prompts/get {{ .Global.ShortName }}_greeting
+}

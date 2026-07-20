@@ -52,6 +52,19 @@ debugger:
 #    otlp:
 #      endpoint: http://127.0.0.1:4317
 
+# AI 连接器配置（MCP Server）
+# 启用后可在 modeler/mcp/ 下编写自定义原生 MCP 资源（Tools / Resources / Prompts），
+# 并在 handler/private.go 的 privateMCPHandle() 中注册到 MCP Server。
+# 详见：https://grpc-kit.com/docs/roadmap/mcp/07-phase7-custom-tool-extension
+aiconnector:
+  enable: false
+  mcp_server:
+    enable: false
+    path: /mcp
+    transport: streamable_http
+    allowed_tags:
+      - mcp
+
 # 应用私有配置
 independent:
   name: grpc-kit

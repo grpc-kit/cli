@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 
 	"{{ .Global.Repository }}/modeler"
+	"{{ .Global.Repository }}/modeler/mcp"
 )
 
 func (m *Microservice) privateExtended() ([]modeler.ClientIndependentOption, error) {
@@ -55,6 +56,43 @@ func (m *Microservice) privateHTTPHandle(mux *http.ServeMux) error {
 	mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = fmt.Fprintf(w, "")
 	})
+
+	return nil
+}
+
+// privateMCPHandle 注册自定义原生 MCP 资源（Tools / Resources / Prompts）。
+// 在 HTTPHandlerFrontend（AutoBridge 已同步完成）之后、StartBackground 之前调用，
+// 确保 HTTP Server 启动时所有 MCP 资源（AutoBridge Tool + 自定义）均已就绪。
+// MCP 未启用时 wrapper 为 nil，直接跳过。
+func (m *Microservice) privateMCPHandle() error {
+	wrapper := m.baseCfg.MCPServerInstance()
+	if wrapper == nil {
+		return nil // MCP 未启用，跳过
+	}
+
+	// 按需收集依赖（与 privateExtended() 装配 IndependentCfg 的模式一致）
+	var opts []mcp.RegistrarOption
+
+	// 数据库（未配置时 GetEntClient 返回 error，静默跳过）
+	if db, err := m.thisCfg.GetEntClient(); err == nil && db != nil {
+		opts = append(opts, mcp.WithDatabase(db))
+	}
+
+	// 工作流（未配置时 GetFlowClient 返回 error，静默跳过）
+	if fc, err := m.thisCfg.GetFlowClient(); err == nil && fc != nil {
+		opts = append(opts, mcp.WithWorkflow(fc))
+	}
+
+	// 日志
+	opts = append(opts, mcp.WithLogger(m.logger))
+
+	// 业务开发者可在此追加自定义 Option，例如：
+	// opts = append(opts, mcp.WithRPCClient(m.client))
+
+	registrar := mcp.NewRegistrar(opts...)
+	if regErr := registrar.Register(wrapper.MCPServer()); regErr != nil {
+		m.logger.Warnf("register custom mcp resources: %v", regErr)
+	}
 
 	return nil
 }

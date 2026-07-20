@@ -38,6 +38,12 @@ func (m *Microservice) Register(ctx context.Context) error {
         return err
     }
 
+    // 注册自定义 MCP 资源（Tools/Resources/Prompts，在 private.go 中实现）
+    // 此时 HTTPHandlerFrontend 已同步完成 AutoBridge，自定义资源与 AutoBridge Tool 共存
+    if err := m.privateMCPHandle(); err != nil {
+        return err
+    }
+
     // 注册HTTP网关
     if err := m.server.RegisterGateway(mux); err != nil {
         return err
