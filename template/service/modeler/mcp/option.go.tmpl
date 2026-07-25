@@ -1,0 +1,23 @@
+package mcp
+
+import (
+	logrus "github.com/sirupsen/logrus"
+
+	"{{ .Global.Repository }}/modeler/ent"
+	"{{ .Global.Repository }}/modeler/flow"
+)
+
+// WithDatabase 注入 ent 数据库客户端
+func WithDatabase(db *ent.Client) RegistrarOption {
+	return func(r *Registrar) { r.db = db }
+}
+
+// WithWorkflow 注入 flow 工作流客户端
+func WithWorkflow(flow *flow.Client) RegistrarOption {
+	return func(r *Registrar) { r.flow = flow }
+}
+
+// WithLogger 注入日志实例
+func WithLogger(logger *logrus.Entry) RegistrarOption {
+	return func(r *Registrar) { r.logger = logger }
+}
