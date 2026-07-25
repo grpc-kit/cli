@@ -11,6 +11,87 @@
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-25
+
+### Added
+
+#### grpc-kit/api 模块
+
+- 新增企业级凭证（Credential）管理完整 API 定义
+
+  在 `known/admin/v1/` 下新增凭证管理的完整接口，支持 API Key、对称密钥、非对称密钥对、X.509 证书、软件许可证、通用密文六类凭证：
+
+  1. 新增 `Credential` 核心消息（`admin.common.proto`），采用分区设计（标识区 -> 展示区 -> 分类区 -> 管理区 -> 密钥材料区 -> 生命周期区 -> 扩展区 -> 审计区），含 `Type`/`Algorithm`/`Usage`/`Status`/`Source` 嵌套枚举，密钥材料以 `oneof key_material` 表达
+  2. 新增 6 个 RPC 方法（`admin.proto`）：`CreateCredential` / `ListCredentials` / `GetCredential` / `UpdateCredential` / `DeleteCredential` / `RevealCredentialSecret`
+  3. 新增 `security.proto` 请求/响应消息，支持 cursor/offset 双分页、AIP-160 `filter`、`order_by`、`FieldMask` 局部更新
+  4. `RevealCredentialSecret` 支持用户密码 SHA256 二次验证后按类型揭示敏感字段
+  5. 新增 `CredentialCode` 种子枚举（`code.proto`），含 `CREDENTIAL_CODE_JWT_SIGNING_V1`（DB code: `jwt-signing-v1`）
+  6. 新增 gateway 路由（`admin.gateway.yaml`，前缀 `/builtin/admin/api/v1/credentials`）及 OpenAPI/Swagger 文档
+
+#### grpc-kit/pkg 模块
+
+- 新增凭证（Credential）管理服务实现
+
+  在 `admin/rpc_security_keys.go` 实现 `KnownAdmin` 服务的全部凭证 RPC 方法：
+
+  1. 敏感字段（`api_secret`/`private_key`/`passphrase`/`license_key`/`symmetric_key`）使用 AES-GCM 加密存储，`credentialToProto` 永不映射 `*_encrypted` 字段
+  2. `computeFingerprint` 按凭证类型计算 SHA-256 摘要（64 字符 hex），用于幂等去重；`SECRET` 类型 Token 持久化（`type=SECRET + usage=AUTH + source=USER`）跳过指纹检查
+  3. `RevealCredentialSecret` 校验当前用户密码 SHA256 后解密返回敏感字段
+  4. `CreateCredential` 空 `code` 时自动生成 12 位随机码（复用 `schema.EnsureCode`）
+  5. `UpdateCredential` 通过 `FieldMask` 支持局部更新，`code`/`type`/`algorithm`/`key_material`/`fingerprint` 不可修改
+  6. `DeleteCredential` 软删除，受保护凭证（`protected=true`）禁止删除
+
+- 新增 Lion ORM `credentials` 实体模型
+
+  在 `lion/credentials/` 新增基于 ent 的凭证实体，覆盖 API Key、密钥对、X.509 证书、许可证、对称密钥等全部字段类型及审计字段。
+
+- 新增凭证种子代码管理
+
+  `admin/well_known_seed_code.go` 新增 `seedCredentialCode()`，将 `CREDENTIAL_CODE_JWT_SIGNING_V1` 映射为 DB code `jwt-signing-v1`，与既有 `DepartmentCode`/`RoleCode`/`AuthProviderCode`/`BootstrapUsername` 风格统一。
+
+- 新增 MCP Server 优雅关闭
+
+  `mcp/mcp.go` 新增 `Server.Close()` 方法，采用 best-effort 策略遍历关闭所有活跃 sessions，收集首个错误但继续关闭剩余 session。
+
+- 新增 MCP 内置 Resources 与 Prompt
+
+  1. `mcp/tools/resources.go` 新增 `RegisterBuiltinResources()`，注册 `grpc-kit://version`、`grpc-kit://openapi-spec/microservice`、`grpc-kit://openapi-spec/admin` 三个内置资源，镜像已公开的 `/version`、`/openapi-spec` HTTP 端点
+  2. `mcp/tools/prompts.go` 新增 `RegisterGettingStartedPrompt()` 内置 Prompt `getting_started`，服务名取自 microservice swagger 的 `info.title`
+
+- 新增 AutoBridge HTTP 方法语义标注
+
+  `mcp/tools/bridge.go` 新增 `buildToolAnnotations()`，按 HTTP method 推断 MCP `ToolAnnotations`：GET/HEAD/OPTIONS 只读+幂等、PUT 幂等写入、DELETE 幂等破坏性、POST/PATCH 非幂等；`DestructiveHint` 显式置 `false` 以覆盖 SDK 默认值。
+
+- 新增 MFA 自服务校验
+
+  `admin/rpc_auth_mfa.go` 为 `SetupUserMFA` / `DisableUserMFA` 增加自服务门：用户只能管理自己的 MFA，防止已认证但无角色用户越权操作他人账户。
+
+### Changed
+
+#### grpc-kit/pkg 模块
+
+- 调整 AutoBridge 工具命名格式
+
+  `mcp/tools/bridge.go` 工具名称仅取方法名（snake_case），移除服务名前缀；多 service 场景下 method 重名由 `uniqueToolName` 追加 `_2`/`_3` 兜底。
+
+- 更新凭证种子代码为 JWT 签名版本
+
+  `admin/well_known_seed_code.go` 凭证种子代码调整为 JWT 签名版本，同步调整 `rpc_security_keys_test.go` 相关测试用例。
+
+### Removed
+
+#### grpc-kit/api 模块
+
+- 移除 `CredentialSeedCode` 枚举
+
+  移除旧的 `CredentialSeedCode` 枚举，统一为 `CredentialCode` 种子枚举，与既有种子代码体系风格一致。
+
+#### grpc-kit/pkg 模块
+
+- 移除 MCP 内部运行配置暴露工具
+
+  移除早期 `get_config` 等内部运行配置暴露工具（见 ADR-009），改为通过内置 Resources 镜像公开 HTTP 端点，不引入新安全面。
+
 ## [0.4.0] - 2026-07-08
 
 ### Added
