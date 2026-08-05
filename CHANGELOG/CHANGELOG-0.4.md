@@ -11,6 +11,89 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-08-05
+
+### Added
+
+#### grpc-kit/pkg 模块
+
+- 新增标准化 Access Token Claims 与统一签发器
+
+  1. `auth/token.go` 新增 `CommonClaims` 与 `AccessTokenClaims`，分离 OIDC ID Token 和 OAuth 2.0 Access Token 的语义
+  2. Access Token 新增 `client_id` / `scope` / `roles` 声明，并统一携带 `sub` / `iat` / `exp` / `jti` / `tenant` / `groups`
+  3. 新增 `BuildAccessTokenClaims` 以及 HS256 / RS256 签名辅助函数；Access Token 的 JWT `typ` 为 `at+jwt`，ID Token 为 `JWT`
+  4. 统一本地静态用户、LDAP、OIDC、OAuth2 与 MFA 验证后的令牌签发流程
+
+- 新增基于 `roles` 的授权配置与 Context API
+
+  1. `security.authorization` 新增 `allowed_roles`，`http_users` 新增 `roles`
+  2. `cfg.LocalConfig` 新增 `AccessTokenFrom()` / `RolesFrom()`
+  3. `rpc` 新增 `ContextWithTokenClaims()` / `GetTokenClaimsFromContext()` 与 roles Context 存取方法
+  4. 旧的 `allowed_groups` 继续兼容；`IDTokenFrom()` 和 ID Token Context 方法保留一个兼容周期
+
+- 新增 JWKS 凭证生命周期保护
+
+  1. 创建 KEY_PAIR / X.509 凭证时，支持将 PEM 或 DER 公钥、私钥和证书统一归一化为 DER 存储，PKCS#8 RSA 私钥转换为 PKCS#1 DER
+  2. 禁止禁用或删除最后一个活跃 JWKS 凭证，确保系统始终保留可用签名密钥
+  3. JWKS 端点同时返回 `ACTIVE` 和 `EXPIRED` 公钥，便于密钥轮换后继续验证尚未过期的历史令牌
+
+- OAuth2 Userinfo 新增 HTTP Basic Auth 支持
+
+  `/builtin/admin/api/v1/oauth2/userinfo` 现可使用 Bearer Access Token 或 `app.yaml` 中配置的 HTTP Basic 用户访问；在未配置数据库时也可返回最小身份信息。
+
+### Changed
+
+#### grpc-kit/pkg 模块
+
+- 分离角色与群组语义
+
+  `roles` 专用于授权，`groups` 仅表示用户的群组成员关系；权限前置门和 `allowed_roles` 均仅检查角色。`allowed_groups` 仅作为旧配置名兼容，其值仍按 role code 解释；同时配置两者时必须保持集合一致，否则拒绝授权。
+
+- 调整 JWT / OIDC 声明模型
+
+  1. 新签发令牌使用 OIDC 标准 `preferred_username`，仍兼容读取旧 `username` 声明
+  2. 新 Access Token 不再签发历史 `appid` / `username` 声明，也不再生成 `<username>@localhost` 占位邮箱
+  3. `IDTokenClaims` 补充 `nonce` / `azp` / `auth_time` / `acr` / `amr` / `at_hash` / `c_hash` 等 OIDC 标准声明
+
+- 改进角色与群组的有效性计算
+
+  签发令牌时分别计算 role code 与 group code，并过滤未激活、已过期或已删除的成员关系、群组、部门和角色。
+
+- 调整 MFA Challenge 令牌签发上下文
+
+  MFA 挑战保留 `client_id` / `scope` / `tenant` / TTL，确保完成 MFA 后签发的 Access Token 与原始登录请求一致；Challenge 读写改为深拷贝和显式更新暂存密钥。
+
+- 升级依赖
+
+  1. `github.com/golang-jwt/jwt` 从 v4.5.2 升级至 v5.3.1
+  2. `github.com/modelcontextprotocol/go-sdk` 从 v1.6.1 升级至 v1.7.0
+
+- 升级注意
+
+  1. 仅包含 `groups` 而不包含 `roles` 的旧 Access Token 不再获得角色权限，升级后应让用户重新登录以换取新令牌
+  2. 配置项建议从 `allowed_groups` 迁移至 `allowed_roles`；迁移期间同时配置时，两者的 role code 必须一致
+  3. 直接构造 `auth.IDTokenClaims` 的调用方需适配内嵌的 `CommonClaims`；业务 Access Token 请改用 `AccessTokenClaims`、`AccessTokenFrom()` 与新 Token Claims Context API
+
+### Fixed
+
+#### grpc-kit/pkg 模块
+
+- 修复 `SetEmail()` 条件反转导致非空邮箱未被写入的问题，并按上游 `email_verified` 声明设置 GitHub / OAuth2 用户的邮箱验证状态。
+
+- 修复角色创建和更新时遗漏 `status` 字段的问题；创建时未指定状态默认为 `ACTIVE`。
+
+- 修复受保护凭证无法更新 `status` 的问题，保留 `display_name` / `description` / `status` 三个可更新字段。
+
+- 修复 HS256 验证在启用 `skip_expiry_check` 时的过期校验处理，改用 jwt/v5 `WithoutClaimsValidation` 跳过声明校验，但仍保留签名验证。
+
+### Security
+
+#### grpc-kit/pkg 模块
+
+- OIDC 登录改为通过 Provider Discovery 获取 Verifier，并校验上游 `id_token` 的签名、Issuer、Audience 与有效期后再读取 Claims。
+
+- 授权不再将 `groups` 声明回退解释为角色，避免群组成员关系与权限角色混用造成误授权。
+
 ## [0.4.1] - 2026-07-25
 
 ### Added
