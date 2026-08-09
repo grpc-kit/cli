@@ -1,9 +1,13 @@
 package mcp
 
 import (
+	"context"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	mcpserver "github.com/grpc-kit/pkg/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // TestRegistrar_AllResources 验证示例 Tool / Resource / Prompt 能成功注册到 MCP Server。
@@ -22,8 +26,44 @@ func TestRegistrar_AllResources(t *testing.T) {
 		t.Fatalf("Register: %v", err)
 	}
 
-	// TODO: 通过 SDK session 端到端调用验证（参考 pkg/mcp/integration_test.go）：
-	// - tools/call {{ .Global.ShortName }}_echo
-	// - resources/read {{ .Global.ShortName }}://config
-	// - prompts/get {{ .Global.ShortName }}_greeting
+	httpServer := httptest.NewServer(wrapper.Handler())
+	defer httpServer.Close()
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{Name: "registrar-test", Version: "0.0.1"}, nil)
+	session, err := client.Connect(context.Background(), &sdkmcp.StreamableClientTransport{Endpoint: httpServer.URL}, nil)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	defer session.Close()
+
+	toolResult, err := session.CallTool(context.Background(), &sdkmcp.CallToolParams{
+		Name: "{{ .Global.ShortName }}_echo", Arguments: map[string]any{"text": "hello"},
+	})
+	if err != nil || toolResult.IsError || len(toolResult.Content) != 1 {
+		t.Fatalf("CallTool: result=%v err=%v", toolResult, err)
+	}
+	if text, ok := toolResult.Content[0].(*sdkmcp.TextContent); !ok || !strings.Contains(text.Text, `"echo":"hello"`) {
+		t.Fatalf("CallTool content = %#v", toolResult.Content)
+	}
+
+	resourceResult, err := session.ReadResource(context.Background(), &sdkmcp.ReadResourceParams{URI: "{{ .Global.ShortName }}://config"})
+	if err != nil || len(resourceResult.Contents) != 1 || !strings.Contains(resourceResult.Contents[0].Text, `"service":"{{ .Global.ShortName }}"`) {
+		t.Fatalf("ReadResource: result=%v err=%v", resourceResult, err)
+	}
+
+	promptResult, err := session.GetPrompt(context.Background(), &sdkmcp.GetPromptParams{
+		Name: "{{ .Global.ShortName }}_greeting", Arguments: map[string]string{"name": "Codex"},
+	})
+	if err != nil || len(promptResult.Messages) != 1 {
+		t.Fatalf("GetPrompt: result=%v err=%v", promptResult, err)
+	}
+	text, ok := promptResult.Messages[0].Content.(*sdkmcp.TextContent)
+	if !ok || !strings.Contains(text.Text, "Codex") {
+		t.Fatalf("GetPrompt content = %#v", promptResult.Messages)
+	}
+}
+
+func TestRegistrarRejectsNilServer(t *testing.T) {
+	if err := NewRegistrar().Register(nil); err == nil {
+		t.Fatal("Register(nil) should fail")
+	}
 }
