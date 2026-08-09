@@ -91,7 +91,7 @@ func (m *Microservice) privateMCPHandle() error {
 
 	registrar := mcp.NewRegistrar(opts...)
 	if regErr := registrar.Register(wrapper.MCPServer()); regErr != nil {
-		m.logger.Warnf("register custom mcp resources: %v", regErr)
+		return fmt.Errorf("register custom mcp resources: %w", regErr)
 	}
 
 	return nil

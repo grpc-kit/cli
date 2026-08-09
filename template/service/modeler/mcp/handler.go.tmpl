@@ -3,6 +3,8 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -29,9 +31,15 @@ func (r *Registrar) handleEcho(
 			}, nil
 		}
 	}
+	if strings.TrimSpace(args.Text) == "" {
+		return &sdkmcp.CallToolResult{
+			IsError: true,
+			Content: []sdkmcp.Content{&sdkmcp.TextContent{Text: `{"error":"text is required"}`}},
+		}, nil
+	}
 
 	if r.logger != nil {
-		r.logger.Debugf("mcp echo tool called: text=%q", args.Text)
+		r.logger.Debugf("mcp echo tool called: text_length=%d", len(args.Text))
 	}
 
 	payload, _ := json.Marshal(map[string]any{"echo": args.Text})
@@ -76,7 +84,10 @@ func (r *Registrar) handleGreeting(
 	// 取出框架注入的 Authorization header（如需透传给后端 gRPC 调用）：
 	// authHeader := mcpserver.AuthHeaderFromContext(ctx)
 
-	name := req.Params.Arguments["name"]
+	name := strings.TrimSpace(req.Params.Arguments["name"])
+	if name == "" {
+		return nil, fmt.Errorf("name is required")
+	}
 	return &sdkmcp.GetPromptResult{
 		Description: "问候语模板",
 		Messages: []*sdkmcp.PromptMessage{

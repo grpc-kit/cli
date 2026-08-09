@@ -1,6 +1,8 @@
 package mcp
 
 import (
+	"fmt"
+
 	logrus "github.com/sirupsen/logrus"
 
 	mcpserver "github.com/grpc-kit/pkg/mcp"
@@ -41,6 +43,10 @@ func NewRegistrar(opts ...RegistrarOption) *Registrar {
 // server 参数为 wrapper.MCPServer() 返回的 SDK 实例，
 // 其上提供 AddTool / AddResource / AddResourceTemplate / AddPrompt 四个方法，按需调用。
 func (r *Registrar) Register(server *sdkmcp.Server) error {
+	if server == nil {
+		return fmt.Errorf("register custom MCP resources: server is nil")
+	}
+
 	// ── Tools ──────────────────────────────────────────
 	// 示例 Tool：echo（业务开发者可替换为实际 Tool）
 	server.AddTool(&sdkmcp.Tool{
