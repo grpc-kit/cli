@@ -52,6 +52,8 @@ generate: precheck ## Generate code from proto files.
 	@./scripts/version.sh update
 	@echo ">> generation code from proto files"
 	@./scripts/generate.sh
+	@echo ">> synchronize Go module dependencies"
+	@${GO} mod tidy
 	@echo ">> generation database schema"
 	@./scripts/generate.sh gen_ent
 
