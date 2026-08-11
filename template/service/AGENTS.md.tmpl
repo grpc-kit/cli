@@ -8,6 +8,13 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 - Main Branch: `main`
 - Current Version: See `VERSION`
 
+## Shared Skills
+
+- Run `make skills` to install or update grpc-kit shared skills under `scripts/skills/skills`.
+- When a task matches a shared skill, read its complete `SKILL.md` before acting and follow any referenced resources it requires.
+- For release notes, version summaries, or CHANGELOG updates, use `scripts/skills/skills/generate-release-changelog/SKILL.md`.
+- If the shared skill directory is unavailable, report that it has not been initialized before falling back to repository conventions.
+
 ## Repository Structure
 
 ```text

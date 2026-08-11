@@ -71,6 +71,7 @@ func TestServiceTemplateRendersMCPExtension(t *testing.T) {
 	assertContains("config/app-dev-local.yaml", "aiconnector:", "mcp_server:")
 	assertContains("go.mod", "go 1.25.0", "github.com/grpc-kit/pkg v0.4.2", "github.com/modelcontextprotocol/go-sdk v1.7.0")
 	assertContains("Makefile", ">> synchronize Go module dependencies", "@${GO} mod tidy")
+	assertContains("AGENTS.md", "## Shared Skills", "scripts/skills/skills/generate-release-changelog/SKILL.md")
 
 	for _, relativePath := range []string{"handler/private.go", "modeler/mcp/registrar.go", "modeler/mcp/handler.go"} {
 		content, err := os.ReadFile(filepath.Join(root, relativePath))
