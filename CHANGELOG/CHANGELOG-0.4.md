@@ -11,6 +11,83 @@
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-08-11
+
+### Added
+
+#### grpc-kit/api 模块
+
+- 新增个人中心自服务 API
+
+  1. 新增 `GetCurrentUser`，返回当前认证用户的最小化个人资料、MFA 状态、是否支持修改本地密码以及稳定的 `ETag`
+  2. 新增 `UpdateCurrentUser`，通过 `FieldMask` 更新当前用户可编辑的个人资料字段
+  3. 新增 `ChangeCurrentUserPassword`，支持当前用户修改本地密码
+  4. 新增 `DeleteUserMFA`，供已获授权的管理员重置指定用户的 MFA 配置
+
+#### grpc-kit/pkg 模块
+
+- 新增个人中心自服务实现
+
+  `GetCurrentUser` / `UpdateCurrentUser` / `ChangeCurrentUserPassword` 基于认证上下文操作当前用户；个人资料响应不暴露审计、身份凭据和成员关系等管理字段，并设置 `Cache-Control: private, no-store`。
+
+- 新增普通管理员、用户和访客内置角色，以及 `unassigned` 内置部门代码。
+
+- 微信登录新增 UnionID 持久化与冲突检测，避免同一 UnionID 关联到多个本地用户。
+
+#### grpc-kit/cli 模块
+
+- 服务模板新增 MCP 注册器端到端测试，覆盖 Tool 调用、Resource 读取和 Prompt 获取，并验证生成的 MCP 扩展点及 Go 源码可解析。
+
+- 服务模板的 `generate` 目标在代码生成后自动执行 `go mod tidy`。
+
+### Changed
+
+#### grpc-kit/api 模块
+
+- 调整 MFA 自服务 API 为当前用户语义
+
+  `SetupUserMFA` / `ConfirmUserMFA` / `DisableUserMFA` 重命名为 `SetupCurrentUserMFA` / `ConfirmCurrentUserMFA` / `DisableCurrentUserMFA`，并移除请求中的 `user_id`；管理员重置其他用户 MFA 请改用 `DeleteUserMFA`。
+
+- 重构 `CreateAuthTokenRequest` 为 OAuth2 Access Token 签发模型
+
+  移除 `appid`、`phone_number` 和 `password_hash` 等身份凭证输入；新增 `client_id`、`scope`、`tenant`、`roles`、`groups`、`email_verified` 与 `subject` 声明字段，支持超级管理员委托签发。
+
+- `UpdateCredentialRequest` 对不可修改字段（`code`、`type`、`algorithm`、`key_material`、`fingerprint`）的变更请求，统一返回参数错误，不再静默忽略。
+
+#### grpc-kit/pkg 模块
+
+- `CreateAuthToken` 改为必须认证；仅超级管理员可委托为其他用户签发令牌，非超级管理员只能在自身角色、群组与租户范围内签发。
+
+- 令牌签发不再回退写入默认租户；身份与授权声明按请求和授权结果按需写入。
+
+- MCP 初始化与前端管理开关解耦；个人中心自服务方法不受管理 API allow-list 限制，并允许 `Cache-Control` 响应头透传。
+
+- 内置菜单调整：移除已并入“本地配置 > 认证鉴权”的“全局设置”菜单，将凭证管理更名为“凭证与令牌”；未注册策略分类返回空分类，以支持前端空状态展示。
+
+#### grpc-kit/cli 模块
+
+- 服务模板升级至 Go 1.25，并更新 grpc-gateway、gRPC、OpenTelemetry、MCP SDK 等依赖；模板使用 `github.com/grpc-kit/pkg v0.4.2`。
+
+- MCP 模板加强运行时校验：注册器拒绝空 Server，`echo` Tool 拒绝空文本，问候 Prompt 要求非空名称；自定义 MCP 资源注册失败将直接返回错误。
+
+### Fixed
+
+#### grpc-kit/pkg 模块
+
+- MFA challenge 绑定发起时的 Access Token 会话，防止跨会话确认或关闭 MFA；用户管理新增细粒度权限检查，并禁止更新服务端托管字段。
+
+- 内置角色初始化改为幂等收敛：历史数据的可修正属性与种子不一致时自动补齐，不再导致初始化失败。
+
+- 受保护菜单仅在字段实际变化时才视为修改，并补充 `credential_source` 解析支持。
+
+### Security
+
+#### grpc-kit/pkg 模块
+
+- 个人中心和 MFA 自服务操作仅作用于认证上下文中的当前主体；返回的个人资料排除管理员审计、身份凭据和成员关系信息。
+
+- 收紧令牌签发与用户管理授权边界，避免未认证签发、越权委托签发及客户端篡改服务端托管用户字段。
+
 ## [0.4.2] - 2026-08-05
 
 ### Added
