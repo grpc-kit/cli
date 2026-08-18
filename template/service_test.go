@@ -73,7 +73,28 @@ func TestServiceTemplateRendersMCPExtension(t *testing.T) {
 	assertContains("Makefile", ">> synchronize Go module dependencies", "@${GO} mod tidy")
 	assertContains("AGENTS.md", "## Shared Skills", "scripts/skills/skills/generate-release-changelog/SKILL.md")
 
-	for _, relativePath := range []string{"handler/private.go", "modeler/mcp/registrar.go", "modeler/mcp/handler.go"} {
+	// 黑盒接口 E2E 模版框架，详见 test/e2e/README.md
+	assertContains("test/e2e/README.md", "//go:build e2e", "make test-e2e")
+	assertContains("test/e2e/client/client.go", "//go:build e2e", "func (r *Response) HasRPCCode(")
+	assertContains("test/e2e/fixture/main.go", "//go:build e2e", "func Main(m *testing.M)")
+	assertContains("test/e2e/fixture/env.go", "//go:build e2e", `defaultServiceCode = "echo.v1.demo"`)
+	assertContains("test/e2e/fixture/auth.go", "//go:build e2e", "example.com/acme/echo/test/e2e/client")
+	assertContains("test/e2e/demo/testmain_test.go", "//go:build e2e", "fixture.Main(m)")
+	assertContains("test/e2e/demo/suite_demo_test.go", "//go:build e2e", "/api/healthz", "/api/demo", "Unauthenticated")
+	assertContains("Makefile", "test-e2e:", "vet -tags=e2e")
+	assertContains("AGENTS.md", "test/e2e/")
+
+	for _, relativePath := range []string{
+		"handler/private.go",
+		"modeler/mcp/registrar.go",
+		"modeler/mcp/handler.go",
+		"test/e2e/client/client.go",
+		"test/e2e/fixture/env.go",
+		"test/e2e/fixture/main.go",
+		"test/e2e/fixture/auth.go",
+		"test/e2e/demo/testmain_test.go",
+		"test/e2e/demo/suite_demo_test.go",
+	} {
 		content, err := os.ReadFile(filepath.Join(root, relativePath))
 		if err != nil {
 			t.Fatalf("ReadFile(%s): %v", relativePath, err)
@@ -84,6 +105,7 @@ func TestServiceTemplateRendersMCPExtension(t *testing.T) {
 	}
 
 	fset := token.NewFileSet()
+	e2eRoot := filepath.Join(root, "test", "e2e")
 	err = filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -91,8 +113,26 @@ func TestServiceTemplateRendersMCPExtension(t *testing.T) {
 		if entry.IsDir() || filepath.Ext(path) != ".go" {
 			return nil
 		}
-		_, parseErr := parser.ParseFile(fset, path, nil, parser.AllErrors)
-		return parseErr
+		file, parseErr := parser.ParseFile(fset, path, nil, parser.AllErrors)
+		if parseErr != nil {
+			return parseErr
+		}
+		if !strings.HasPrefix(path, e2eRoot+string(filepath.Separator)) {
+			return nil
+		}
+		// 黑盒纯度约束：test/e2e/ 只允许依赖标准库与 test/e2e/ 内部包，
+		// 禁止 import 本服务的业务包（api/、handler/、internal/、modeler/）。
+		for _, spec := range file.Imports {
+			importPath := strings.Trim(spec.Path.Value, `"`)
+			if !strings.HasPrefix(importPath, "example.com/acme/echo") {
+				continue
+			}
+			if !strings.HasPrefix(importPath, "example.com/acme/echo/test/e2e/") {
+				relativePath, _ := filepath.Rel(root, path)
+				t.Errorf("e2e file %s violates black-box purity by importing %q", relativePath, importPath)
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		t.Fatalf("parse generated Go files: %v", err)

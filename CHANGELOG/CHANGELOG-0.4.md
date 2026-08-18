@@ -11,6 +11,19 @@
 
 ## [Unreleased]
 
+### Added
+
+#### grpc-kit/cli 模块
+
+- 服务模板新增黑盒接口 E2E 测试模版框架
+
+  1. 新增 `test/e2e/`，全部文件带 `//go:build e2e` 构建约束，仅在显式启用该标签时参与编译
+  2. 新增 `test/e2e/client`（仅依赖标准库的最小 HTTP 客户端，支持 Basic / Bearer 鉴权，并把网关统一错误体 `{"error":{...}}` 解码为可断言的状态码）
+  3. 新增 `test/e2e/fixture`（`Main` 统一探活入口、`Env` 环境变量覆盖与 `runID` 数据隔离、`Authed` 鉴权夹具）
+  4. 新增 `test/e2e/demo` 示范用例，覆盖健康检查、Demo 接口的 `response_body` 投影与未认证访问
+  5. 新增 `test/e2e/README.md` 目录规范，含黑盒纯度约束（`test/e2e/` 禁止 import `api/`、`handler/`、`internal/`、`modeler/`）与环境变量覆盖说明；被测服务的运行配置由环境提供（默认 `config/app-dev-local.yaml`），E2E 自身不携带配置
+  6. 新增 `make test-e2e` 目标，`make lint` 增加 `go vet -tags=e2e ./test/e2e/...`，GitLab CI 增加手动触发的 `e2e-tests` 作业（配置路径由 `E2E_CONFIG_FILE` 指定）
+
 ## [0.4.3] - 2026-08-11
 
 ### Added

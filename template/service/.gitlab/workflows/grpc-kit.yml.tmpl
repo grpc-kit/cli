@@ -52,6 +52,47 @@ unit-tests:
   script:
     - make test
 
+# 黑盒接口 E2E 测试，需先在后台拉起服务
+# TODO; 默认手工触发且不阻断流水线，确认 runner 环境（端口、依赖组件）可用后再改为自动执行
+e2e-tests:
+  stage: test
+  needs:
+    - unit-tests
+  variables:
+    # 被测服务的运行配置，需 runner 环境内可读（如挂载或由前置阶段下发）
+    E2E_CONFIG_FILE: config/app-dev-local.yaml
+    # 需与 ${E2E_CONFIG_FILE} 里的 services.http_address 对应
+    E2E_BASE_URL: http://127.0.0.1:8080
+    # 需与 ${E2E_CONFIG_FILE} 里的 security.authentication.http_users 对应
+    E2E_BASIC_USERNAME: user1
+    E2E_BASIC_PASSWORD: grpc-kit-cli
+  script:
+    - source scripts/env
+    - test -f "${E2E_CONFIG_FILE}" || { echo "missing ${E2E_CONFIG_FILE}"; exit 1; }
+    - make build
+    - ./build/service -c "${E2E_CONFIG_FILE}" > e2e-service.log 2>&1 &
+    - |
+      for i in $(seq 1 30); do
+        if curl -sf "${E2E_BASE_URL}/api/healthz?service=${SERVICE_CODE}" > /dev/null; then
+          echo "service is ready"
+          break
+        fi
+        if test "${i}" = "30"; then
+          echo "service not ready, log:"
+          cat e2e-service.log
+          exit 1
+        fi
+        sleep 1
+      done
+    - make test-e2e
+  artifacts:
+    when: always
+    paths:
+      - e2e-service.log
+    expire_in: 24h
+  when: manual
+  allow_failure: true
+
 # 代码覆盖率
 coverage:
   stage: test

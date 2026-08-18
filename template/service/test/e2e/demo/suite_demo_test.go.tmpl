@@ -1,0 +1,205 @@
+//go:build e2e
+
+// demo 域·内置示例接口套件，覆盖
+// api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.gateway.yaml
+// 中 HealthCheck 与 Demo 的全部 HTTP 绑定，外加一条鉴权负例。
+//
+// 用例编号 D1–D8，与子测试名一一对应，便于与设计文档 grep 对照。
+// 这是 E2E 的最小示范：业务接口请按域另建包（test/e2e/<domain>/），
+// 示例接口删除后本文件也应一并删除，详见 test/e2e/README.md。
+package demo
+
+import (
+	"context"
+	"net/http"
+	"net/url"
+	"testing"
+
+	"{{ .Global.Repository }}/test/e2e/fixture"
+)
+
+// demoFixedUUID 是 handler/rpc_demo.go 里写死的示例资源编号：
+// 请求 uuid 等于它时，响应的 pong.pong.name 被固定为 "grpc-kit"。
+const demoFixedUUID = "99feafb5-bed6-4daf-927a-69a2ab80c485"
+
+// exampleResponse 对应 grpc_kit.api.known.example.v1.ExampleResponse。
+// 字段用指针以区分「字段省略」与「零值」—— 网关是否省略零值字段属于实现细节，
+// 用例不应依赖，只断言语义。
+type exampleResponse struct {
+	Name *string `json:"name"`
+}
+
+// TestHealthCheck 覆盖 GET /api/healthz。该方法在 config/app-dev-local.yaml 的
+// security.authentication.insecure_rpcs 内，匿名可访问。
+func TestHealthCheck(t *testing.T) {
+	env := fixture.Init()
+	ctx := context.Background()
+	anonymous := fixture.Anonymous()
+
+	t.Run("D1 匿名访问健康检查返回 SERVING", func(t *testing.T) {
+		resp, err := anonymous.Do(ctx, http.MethodGet,
+			"/api/healthz?service="+url.QueryEscape(env.ServiceCode), nil)
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if !resp.IsOK() {
+			t.Fatalf("期望 HTTP 200，得到 %d: %s", resp.StatusCode, resp.RPCMessage())
+		}
+
+		var body struct {
+			Status *string `json:"status"`
+		}
+		if err := resp.Decode(&body); err != nil {
+			t.Fatalf("解码响应失败: %v（原始响应 %s）", err, resp.Body)
+		}
+		if body.Status == nil || *body.Status != "SERVING" {
+			t.Errorf("期望 status=SERVING，得到 %v（原始响应 %s）", body.Status, resp.Body)
+		}
+	})
+
+	t.Run("D2 未知服务代码返回 404 NotFound", func(t *testing.T) {
+		resp, err := anonymous.Do(ctx, http.MethodGet,
+			"/api/healthz?service="+url.QueryEscape("unknown."+env.RunID), nil)
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("期望 HTTP 404，得到 %d: %s", resp.StatusCode, resp.Body)
+		}
+		if !resp.HasRPCCode("NotFound") {
+			t.Errorf("期望 gRPC 状态 NotFound，得到 %q（原始响应 %s）", resp.RPCCode(), resp.Body)
+		}
+	})
+}
+
+// TestDemo 覆盖 Demo 方法的 5 个 HTTP 绑定与鉴权负例。
+// 这些绑定各自配置了不同的 response_body 投影，是网关规则最容易配错的地方。
+func TestDemo(t *testing.T) {
+	authed := fixture.RequireAuthed(t)
+	env := authed.Env
+	ctx := context.Background()
+
+	t.Run("D3 POST /api/demo 返回 pong 投影并回显 ping.name", func(t *testing.T) {
+		// 用非固定 uuid，走 handler 里「pong.pong.name = req.ping.name」的分支。
+		wantName := env.Name("post")
+		resp, err := authed.Client.Do(ctx, http.MethodPost, "/api/demo", map[string]any{
+			"uuid": env.Prefix() + "post",
+			"ping": map[string]any{"name": wantName},
+		})
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if !resp.IsOK() {
+			t.Fatalf("期望 HTTP 200，得到 %d: %s", resp.StatusCode, resp.RPCMessage())
+		}
+
+		// response_body: pong —— 顶层是 Pong 而非 DemoResponse。
+		var body struct {
+			UUID *string          `json:"uuid"`
+			Pong *exampleResponse `json:"pong"`
+		}
+		if err := resp.Decode(&body); err != nil {
+			t.Fatalf("解码响应失败: %v（原始响应 %s）", err, resp.Body)
+		}
+		if body.UUID == nil {
+			t.Errorf("期望响应顶层含 uuid 字段（response_body: pong 投影），原始响应 %s", resp.Body)
+		}
+		if body.Pong == nil || body.Pong.Name == nil || *body.Pong.Name != wantName {
+			t.Errorf("期望 pong.name=%q，得到 %v（原始响应 %s）", wantName, body.Pong, resp.Body)
+		}
+	})
+
+	t.Run("D4 GET /api/demo 返回完整响应体", func(t *testing.T) {
+		resp, err := authed.Client.Do(ctx, http.MethodGet, "/api/demo", nil)
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if !resp.IsOK() {
+			t.Fatalf("期望 HTTP 200，得到 %d: %s", resp.StatusCode, resp.RPCMessage())
+		}
+
+		// 该绑定未配置 response_body，顶层是完整的 DemoResponse。
+		var body struct {
+			Content []exampleResponse `json:"content"`
+			Pong    *struct {
+				UUID *string `json:"uuid"`
+			} `json:"pong"`
+		}
+		if err := resp.Decode(&body); err != nil {
+			t.Fatalf("解码响应失败: %v（原始响应 %s）", err, resp.Body)
+		}
+		if len(body.Content) == 0 {
+			t.Fatalf("期望 content 非空，原始响应 %s", resp.Body)
+		}
+		if body.Pong == nil {
+			t.Errorf("期望完整响应体含 pong 字段，原始响应 %s", resp.Body)
+		}
+	})
+
+	t.Run("D5 GET /api/demo/{uuid} 返回 pong.pong 投影", func(t *testing.T) {
+		resp, err := authed.Client.Do(ctx, http.MethodGet, "/api/demo/"+demoFixedUUID, nil)
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if !resp.IsOK() {
+			t.Fatalf("期望 HTTP 200，得到 %d: %s", resp.StatusCode, resp.RPCMessage())
+		}
+
+		// response_body: pong.pong —— 顶层直接是 ExampleResponse。
+		var body exampleResponse
+		if err := resp.Decode(&body); err != nil {
+			t.Fatalf("解码响应失败: %v（原始响应 %s）", err, resp.Body)
+		}
+		if body.Name == nil || *body.Name != "grpc-kit" {
+			t.Errorf("请求固定 uuid 时期望 name=grpc-kit，得到 %v（原始响应 %s）", body.Name, resp.Body)
+		}
+	})
+
+	t.Run("D6 PUT /api/demo/{uuid} 回显 ping 投影", func(t *testing.T) {
+		wantName := env.Name("put")
+		// body: "ping" —— 请求体本身就是 ExampleRequest。
+		resp, err := authed.Client.Do(ctx, http.MethodPut, "/api/demo/"+demoFixedUUID,
+			map[string]any{"name": wantName, "value": 1, "age": 2})
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if !resp.IsOK() {
+			t.Fatalf("期望 HTTP 200，得到 %d: %s", resp.StatusCode, resp.RPCMessage())
+		}
+
+		// response_body: ping —— 顶层直接是 ExampleResponse。
+		var body exampleResponse
+		if err := resp.Decode(&body); err != nil {
+			t.Fatalf("解码响应失败: %v（原始响应 %s）", err, resp.Body)
+		}
+		if body.Name == nil || *body.Name != wantName {
+			t.Errorf("期望回显 name=%q，得到 %v（原始响应 %s）", wantName, body.Name, resp.Body)
+		}
+	})
+
+	t.Run("D7 DELETE /api/demo/{uuid} 返回 empty 投影", func(t *testing.T) {
+		resp, err := authed.Client.Do(ctx, http.MethodDelete, "/api/demo/"+demoFixedUUID, nil)
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		// response_body: empty，而 handler 未给 Empty 赋值，
+		// 因此只断言调用成功，不约束响应体形状。
+		if !resp.IsOK() {
+			t.Fatalf("期望 HTTP 2xx，得到 %d: %s", resp.StatusCode, resp.RPCMessage())
+		}
+	})
+
+	t.Run("D8 匿名访问受保护接口返回 401 Unauthenticated", func(t *testing.T) {
+		// Demo 不在 insecure_rpcs 列表内，匿名调用应被认证拦截。
+		resp, err := fixture.Anonymous().Do(ctx, http.MethodGet, "/api/demo", nil)
+		if err != nil {
+			t.Fatalf("请求失败: %v", err)
+		}
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("期望 HTTP 401，得到 %d: %s", resp.StatusCode, resp.Body)
+		}
+		if !resp.HasRPCCode("Unauthenticated") {
+			t.Errorf("期望 gRPC 状态 Unauthenticated，得到 %q（原始响应 %s）", resp.RPCCode(), resp.Body)
+		}
+	})
+}

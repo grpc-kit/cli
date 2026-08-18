@@ -62,11 +62,16 @@ lint: generate ## Run go fmt and vet against code.
 	@${GO} mod tidy
 	@${GO} fmt ./...
 	@${GO} vet ./...
+	@${GO} vet -tags=e2e ./test/e2e/...
 
 .PHONY: test
 test: generate ## Run unit tests.
 	@${GO} mod tidy
 	@${GO} test ./... -timeout 3m -v -gcflags=-l -cover=true
+
+.PHONY: test-e2e
+test-e2e: ## Run black-box API e2e tests against a running local server (make run).
+	@${GO} test -tags=e2e -p 1 -count=1 ./test/e2e/... -timeout 5m -v
 
 .PHONY: skills
 skills: ## Install or update grpc-kit common skills.
