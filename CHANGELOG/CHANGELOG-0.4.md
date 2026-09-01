@@ -24,6 +24,116 @@
   5. 新增 `test/e2e/README.md` 目录规范，含黑盒纯度约束（`test/e2e/` 禁止 import `api/`、`handler/`、`internal/`、`modeler/`）与环境变量覆盖说明；被测服务的运行配置由环境提供（默认 `config/app-dev-local.yaml`），E2E 自身不携带配置
   6. 新增 `make test-e2e` 目标，`make lint` 增加 `go vet -tags=e2e ./test/e2e/...`，GitLab CI 增加手动触发的 `e2e-tests` 作业（配置路径由 `E2E_CONFIG_FILE` 指定）
 
+## [0.4.4] - 2026-09-01
+
+### Added
+
+#### grpc-kit/api 模块
+
+- 新增用户、群组与部门回收站（软删除）接口
+
+  1. 新增 `DeleteUser` / `UndeleteUser` / `ExpungeUser`：用户软删除进入回收站、从回收站恢复（恢复后为 `DISABLED` 状态）与永久删除；`ListUsers` 新增 `show_deleted` 回收站查询参数，`filter` 支持 `deleted_at != null` 过滤语义
+  2. 新增 `DeleteGroup` / `UndeleteGroup` / `ExpungeGroup`：群组软删除、恢复与永久删除；`Group` 新增 `protected` 字段，标识系统内置/受保护群组
+  3. 新增 `UndeleteDepartment` / `ExpungeDepartment`：部门软删除恢复与永久删除；`ListDepartments` 新增 `show_deleted` 回收站查询参数，回收站查询需同时设置 `show_deleted=true` 与 `filter="deleted_at != null"`
+  4. `DeleteUser` / `DeleteGroup` / `DeleteDepartment` 统一改为返回对应实体消息，不再返回 `Empty`
+
+- 新增 `ListUserAuthBindings` 用户认证身份绑定查询接口
+
+  返回指定用户的认证身份与提供方摘要，包含 `provider_user_id`、`provider_union_id`、`credential_configured`（该 Provider 所需的用户级凭据是否已配置，当前仅 LOCAL 身份填充）等字段。
+
+- `LdapConfig` 新增 `user_id_attribute` 字段
+
+  支持从已认证的 LDAP Entry 属性生成 `provider_user_id`；新建 Provider 未提供时默认 `uid`，历史配置缺失时由服务端继续按 `dn` 兼容。
+
+- 新增智能连接（AI Connector）本地配置消息
+
+  1. 新增 `AIConnectorConfig` 与 `MCPServerConfig` 配置消息
+  2. `LocalConfigs` oneof 新增 `aiconnector` 字段（编号 12），`independent` 字段编号由 12 调整为 13
+
+- 新增群组配置消息
+
+  `Group` 新增 `oneof config` 群组配置：`DepartmentConfig`（部门）、`RoleConfig`（角色）、`DynamicConfig`（动态用户过滤）、`SystemConfig`（系统种子过滤），并新增 `parent_id` 层级字段与 `deleted_at`。
+
+- 新增自定义全局设置接口
+
+  新增 `CreateGlobalSetting` / `DeleteGlobalSetting` 方法与 `GlobalSettingInput` 消息，支持按分类创建、删除自定义全局配置项，更新经既有 `UpdateGlobalSettings` 完成。
+
+#### grpc-kit/pkg 模块
+
+- 新增用户、群组与部门回收站（软删除）生命周期实现
+
+  1. 用户：`DeleteUser` 将用户移入回收站，`UndeleteUser` 恢复为 `DISABLED` 状态，`ExpungeUser` 永久删除；认证、MFA 与个人中心自助路径统一拒绝非 `ACTIVE` 或已删除用户；`ListUsers` 支持 `show_deleted` 与 `deleted_at != null` 回收站过滤；删除受最后一名活跃超级管理员保护
+  2. 群组：`DeleteGroup` / `UndeleteGroup` / `ExpungeGroup` 实现软删除、恢复与永久删除；`protected` 群组禁止删除或永久删除
+  3. 部门：删除校验受保护部门、子部门、群组引用及最后一名活跃超级管理员；`UpdateDepartment` 基于 `update_mask` 重写为全字段更新并拒绝已删除部门；部门群组引用须指向未删除的 `ACTIVE` 部门；部门 `code` 增加唯一约束
+
+- `UpdateUser` 支持人工置位 `email_verified` / `phone_verified` 验证状态；联系方式变更且未显式指定时自动重置为未验证。
+
+- 新增 `DeleteUserMFA` 管理接口实现
+
+  重置指定用户的 MFA 密钥、恢复码与启用状态，并清除待处理挑战。
+
+- 新增 `ListUserAuthBindings` 用户认证身份绑定查询实现。
+
+- 新增外部身份自动关联与 LDAP 用户标识解析
+
+  1. 外部登录时通过已验证标识符（规范化邮箱 / E.164 手机号）自动关联本地用户，受全局设置开关控制
+  2. 用户身份提供商与用户映射添加唯一索引，防止重复绑定
+  3. LDAP 支持 `user_id_attribute` 配置，从已认证 Entry 生成 `provider_user_id`（新建默认 `uid`，历史配置按 `dn` 兼容）
+
+- 新增智能连接本地配置支持及 MCP 服务端配置定义，配置快照纳入 `aiconnector` 模块。
+
+- 内置菜单增强：新增可观测性菜单及其子项；建立菜单排序区间契约，业务菜单排序限定于框架菜单之间。
+
+- 增强全局设置：支持创建、获取、更新与删除自定义全局配置项（需超级管理员权限），并提供布尔、整数、浮点数、持续时间、字符串、字符串数组与 JSON 多种数据类型的读取与校验。
+
+- 应用样例配置文件新增对象存储与流程编排配置示例。
+
+### Changed
+
+#### grpc-kit/api 模块
+
+- 调整 `Group` 字段结构
+
+  移除 `ref_id` / `ref_expr`，改为 `oneof config` 表达群组配置；新增 `parent_id` 层级字段（普通 API 当前只能写 0）。字段编号整体重排（如 `protected` 由 18 调整为 16、审计字段后移），按字段编号编码的旧消息不兼容，调用方需重新生成代码。
+
+- `LocalConfigs.independent` 字段编号调整为 13，`aiconnector` 占用编号 12；直接依赖字段编号的调用方需重新生成代码。
+
+#### grpc-kit/pkg 模块
+
+- 重构群组与成员管理模型
+
+  1. 移除部门与用户组的 `lion_groups` 关联边，群组改为 `oneof config` 配置（部门/角色/动态/系统）驱动的成员规则解析
+  2. 组 claim 与成员查询改用关联 `EXISTS` 谓词，并统一 cursor 分页
+  3. 强制组更新显式携带 `update_mask`，统一成员解析路由与过滤器缓存
+
+### Fixed
+
+#### grpc-kit/api 模块
+
+- `PrincipalType` 枚举与 Swagger 描述明确 GROUP 主体角色绑定限制：仅允许 `type=SYSTEM` 的群组。
+
+- 修正用户资料接口 Swagger 描述，移除错误的 `reason` 信息。
+
+#### grpc-kit/pkg 模块
+
+- 修复组 claim 查询过早 `LIMIT` 截断成员结果，并处理内置组 `code` 被软删行占用的情况。
+
+- 外部身份关联失败时返回具体错误原因，替代笼统的失败信息。
+
+- 调整配置管理子菜单排序，与样例配置文件大类顺序保持一致。
+
+### Security
+
+#### grpc-kit/pkg 模块
+
+- MCP 服务端启用同源保护：基于标准库 `CrossOriginProtection` 拒绝不可信跨站请求，并对 SSE / Streamable HTTP 的 GET 长连接同样执行严格同源检查；无 `Origin` 的非浏览器 MCP Client 保持兼容。
+
+- 本地配置查询（`ListLocalConfigs` / `GetLocalConfigs`）收紧为仅超级管理员可访问。
+
+- 配置快照新增敏感信息掩码，按敏感键名递归掩码嵌套配置值，避免敏感数据外泄。
+
+- 外部身份自动关联仅在全部已验证标识符收敛于同一活跃本地用户时执行，防止标识符冲突导致误关联。
+
 ## [0.4.3] - 2026-08-11
 
 ### Added
