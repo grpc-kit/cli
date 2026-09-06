@@ -7,7 +7,7 @@ import (
 	"github.com/grpc-kit/cli/config"
 )
 
-//go:embed service/*
+//go:embed service/* all:service/.agents
 var Assets embed.FS
 
 const (

@@ -15,6 +15,15 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 - For release notes, version summaries, or CHANGELOG updates, use `scripts/skills/skills/generate-release-changelog/SKILL.md`.
 - If the shared skill directory is unavailable, report that it has not been initialized before falling back to repository conventions.
 
+## Service Skills
+
+- Service-specific skills live in `.agents/skills/<skill-name>/SKILL.md`. When a task matches one, read its complete `SKILL.md` and only the supporting resources relevant to the task before acting.
+- Available service skill: `add-api-domain` — add a versioned API domain, HTTP mappings, handler implementation, and API tests. Read `.agents/skills/add-api-domain/SKILL.md` for that work.
+- See `.agents/skills/README.md` for the format and maintenance rules. Native support and refresh behavior vary by client; agents without native discovery can read the indexed file directly.
+- Service skills are independent of shared skills. Do not run `make skills`, access the network, or modify the `scripts/skills` submodule merely to use a service skill.
+- Give service skills distinct names. If a name collides with another scope, use the explicit repository path rather than assuming a client-specific precedence rule.
+- These files are business-editable. When adding or removing a service skill, update the compact index above.
+
 ## Repository Structure
 
 ```text
