@@ -69,10 +69,15 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 	}
 	assertContains("handler/register.go", "DO NOT EDIT", "privateMCPHandle()")
 	assertContains("handler/private.go", "func (m *Microservice) privateMCPHandle() error", "return fmt.Errorf")
+	// Phase 0 slog migration baseline: keep the legacy generated logger surface
+	// explicit until the new template switches to slog in a later phase.
+	assertContains("handler/microservice.go", "*logrus.Entry", "lc.GetLogger()")
+	assertContains("modeler/independent_option.go", "func WithLogger(logger *logrus.Entry)", "func WithWorkflow(logger *logrus.Entry")
+	assertContains("modeler/mcp/option.go", "func WithLogger(logger *logrus.Entry)")
 	assertContains("modeler/mcp/registrar.go", "func (r *Registrar) Register", "server is nil")
 	assertContains("modeler/mcp/registrar_test.go", "session.CallTool", "session.ReadResource", "session.GetPrompt")
 	assertContains("config/app-dev-local.yaml", "aiconnector:", "mcp_server:")
-	assertContains("go.mod", "go 1.25.0", "github.com/grpc-kit/pkg v0.4.2", "github.com/modelcontextprotocol/go-sdk v1.7.0")
+	assertContains("go.mod", "go 1.25.0", "github.com/grpc-kit/pkg v0.4.2", "github.com/modelcontextprotocol/go-sdk v1.7.0", "github.com/sirupsen/logrus v1.9.4")
 	assertContains("Makefile", ">> synchronize Go module dependencies", "@${GO} mod tidy")
 	assertContains("AGENTS.md", "## Shared Skills", "scripts/skills/skills/generate-release-changelog/SKILL.md")
 	assertContains("AGENTS.md", "## Service Skills", ".agents/skills/add-api-domain/SKILL.md")
