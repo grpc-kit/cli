@@ -3,9 +3,10 @@
 package modeler
 
 import (
+	"log/slog"
+
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/grpc-kit/pkg/cfg"
-	"github.com/sirupsen/logrus"
 
 	"{{ .Global.Repository }}/modeler/ent"
 	"{{ .Global.Repository }}/modeler/flow"
@@ -15,7 +16,7 @@ import (
 type ClientIndependentOption func(cfg *IndependentCfg)
 
 // WithLogger 传递日志实例
-func WithLogger(logger *logrus.Entry) ClientIndependentOption {
+func WithLogger(logger *slog.Logger) ClientIndependentOption {
 	return func(cfg *IndependentCfg) {
 		cfg.logger = logger
 	}
@@ -30,7 +31,7 @@ func WithDatabaseEntDriver(driver *entsql.Driver) ClientIndependentOption {
 }
 
 // WithWorkflow 传递流水线配置
-func WithWorkflow(logger *logrus.Entry, fcc *cfg.FlowClientConfig) ClientIndependentOption {
+func WithWorkflow(logger *slog.Logger, fcc *cfg.FlowClientConfig) ClientIndependentOption {
 	return func(cfg *IndependentCfg) {
 		if fcc != nil {
 			client, err := flow.NewClient(logger, fcc)

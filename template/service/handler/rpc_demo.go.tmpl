@@ -2,6 +2,7 @@ package handler
 
 import (
     "context"
+    "fmt"
 
     examplev1 "github.com/grpc-kit/pkg/api/known/example/v1"
 
@@ -10,7 +11,7 @@ import (
 
 // Demo test
 func (m *Microservice) Demo(ctx context.Context, req *pb.DemoRequest) (*pb.DemoResponse, error) {
-    m.logger.Warnf("test demo warn: %v", "func Demo")
+    m.logger.WarnContext(ctx, fmt.Sprintf("test demo warn: %v", "func Demo"))
 
     result := &pb.DemoResponse{
         // GET /api/demo

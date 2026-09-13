@@ -3,8 +3,7 @@ package modeler
 import (
 	"context"
 	"fmt"
-
-	"github.com/sirupsen/logrus"
+	"log/slog"
 
 	"{{ .Global.Repository }}/modeler/ent"
 	"{{ .Global.Repository }}/modeler/flow"
@@ -12,7 +11,7 @@ import (
 
 // IndependentCfg 个性配置
 type IndependentCfg struct {
-	logger *logrus.Entry
+	logger *slog.Logger
 	db     *ent.Client
 	flow   *flow.Client
 
@@ -20,9 +19,7 @@ type IndependentCfg struct {
 }
 
 // Init 用于初始化实例
-func (i *IndependentCfg) Init(opts ...ClientIndependentOption) error {
-	ctx := context.Background()
-
+func (i *IndependentCfg) Init(ctx context.Context, opts ...ClientIndependentOption) error {
 	for _, opt := range opts {
 		opt(i)
 	}

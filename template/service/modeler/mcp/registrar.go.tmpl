@@ -2,8 +2,7 @@ package mcp
 
 import (
 	"fmt"
-
-	logrus "github.com/sirupsen/logrus"
+	"log/slog"
 
 	mcpserver "github.com/grpc-kit/pkg/mcp"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -19,7 +18,7 @@ var _ = mcpserver.AuthHeaderFromContext
 // Registrar 持有业务依赖，实现自定义 MCP 资源注册（Tools / Resources / Prompts）。
 // 业务开发者可在此添加 LLM client、RPC client 等依赖字段及对应 With* 选项。
 type Registrar struct {
-	logger *logrus.Entry
+	logger *slog.Logger
 	db     *ent.Client
 	flow   *flow.Client
 }

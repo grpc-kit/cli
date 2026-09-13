@@ -1,7 +1,7 @@
 package mcp
 
 import (
-	logrus "github.com/sirupsen/logrus"
+	"log/slog"
 
 	"{{ .Global.Repository }}/modeler/ent"
 	"{{ .Global.Repository }}/modeler/flow"
@@ -18,6 +18,6 @@ func WithWorkflow(flow *flow.Client) RegistrarOption {
 }
 
 // WithLogger 注入日志实例
-func WithLogger(logger *logrus.Entry) RegistrarOption {
+func WithLogger(logger *slog.Logger) RegistrarOption {
 	return func(r *Registrar) { r.logger = logger }
 }

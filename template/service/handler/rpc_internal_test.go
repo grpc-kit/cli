@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"testing"
 
 	statusv1 "github.com/grpc-kit/pkg/api/known/status/v1"
@@ -12,7 +11,7 @@ func TestInternal(t *testing.T) {
 		Service: m.baseCfg.Services.ServiceCode,
 	}
 
-	_, err := m.HealthCheck(context.TODO(), req)
+	_, err := m.HealthCheck(t.Context(), req)
 	if err != nil {
 		t.Errorf("HealthCheck test fail: %v", err)
 	}

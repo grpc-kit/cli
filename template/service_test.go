@@ -67,12 +67,31 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 			}
 		}
 	}
-	assertContains("handler/register.go", "DO NOT EDIT", "privateMCPHandle()")
+	assertNotContains := func(relativePath string, forbidden ...string) {
+		t.Helper()
+		content, err := os.ReadFile(filepath.Join(root, relativePath))
+		if err != nil {
+			t.Fatalf("ReadFile(%s): %v", relativePath, err)
+		}
+		for _, value := range forbidden {
+			if strings.Contains(string(content), value) {
+				t.Errorf("%s unexpectedly contains %q", relativePath, value)
+			}
+		}
+	}
+	assertContains("handler/register.go", "DO NOT EDIT", "privateMCPHandle()", "HTTPHandlerFrontendContext(ctx")
 	assertContains("handler/private.go", "func (m *Microservice) privateMCPHandle() error", "return fmt.Errorf")
+	assertContains("handler/microservice.go", `"log/slog"`, "logger  *slog.Logger", "NewMicroservice(ctx context.Context")
+	assertContains("handler/rpc_demo.go", "WarnContext(ctx")
+	assertContains("handler/shutdown.go", "WarnContext(ctx", "DeregisterContext(ctx)")
+	assertContains("modeler/independent_cfg.go", "Init(ctx context.Context")
+	assertContains("modeler/mcp/handler.go", "DebugContext(ctx")
+	assertContains("modeler/mcp/option.go", "WithLogger(logger *slog.Logger)")
 	assertContains("modeler/mcp/registrar.go", "func (r *Registrar) Register", "server is nil")
 	assertContains("modeler/mcp/registrar_test.go", "session.CallTool", "session.ReadResource", "session.GetPrompt")
 	assertContains("config/app-dev-local.yaml", "aiconnector:", "mcp_server:")
-	assertContains("go.mod", "go 1.25.0", "github.com/grpc-kit/pkg v0.4.2", "github.com/modelcontextprotocol/go-sdk v1.7.0")
+	assertContains("go.mod", "go 1.25.0", "github.com/grpc-kit/pkg v0.5.0", "github.com/modelcontextprotocol/go-sdk v1.7.0")
+	assertNotContains("go.mod", "github.com/sirupsen/logrus")
 	assertContains("Makefile", ">> synchronize Go module dependencies", "@${GO} mod tidy")
 	assertContains("AGENTS.md", "## Shared Skills", "scripts/skills/skills/generate-release-changelog/SKILL.md")
 	assertContains("AGENTS.md", "## Service Skills", ".agents/skills/add-api-domain/SKILL.md")
@@ -167,6 +186,14 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 		}
 		if entry.IsDir() || filepath.Ext(path) != ".go" {
 			return nil
+		}
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(content), "github.com/sirupsen/logrus") || strings.Contains(string(content), "*logrus.Entry") {
+			relativePath, _ := filepath.Rel(root, path)
+			t.Errorf("generated Go file %s still references logrus", relativePath)
 		}
 		file, parseErr := parser.ParseFile(fset, path, nil, parser.AllErrors)
 		if parseErr != nil {

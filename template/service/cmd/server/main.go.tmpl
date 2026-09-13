@@ -64,7 +64,7 @@ func startServer(ctx context.Context) (*handler.Microservice, error) {
         return nil, err
     }
 
-    m, err := handler.NewMicroservice(lc)
+    m, err := handler.NewMicroservice(ctx, lc)
     if err != nil {
         return nil, err
     }
