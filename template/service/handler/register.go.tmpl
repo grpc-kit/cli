@@ -29,7 +29,7 @@ func (m *Microservice) Register(ctx context.Context) error {
 	}
 
     // 注册前端托管静态数据
-    if err = m.baseCfg.HTTPHandlerFrontendContext(ctx, mux, public.Assets); err != nil {
+    if err = m.baseCfg.HTTPHandlerFrontend(ctx, mux, public.Assets); err != nil {
         return err
     }
 

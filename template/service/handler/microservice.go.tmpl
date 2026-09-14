@@ -25,7 +25,7 @@ type Microservice struct {
 // NewMicroservice 全局只实例化一次
 func NewMicroservice(ctx context.Context, lc *cfg.LocalConfig) (*Microservice, error) {
     // 基础配置初始化
-    if err := lc.Init(); err != nil {
+    if err := lc.Init(ctx); err != nil {
         return nil, err
     }
 
