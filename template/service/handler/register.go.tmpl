@@ -50,7 +50,7 @@ func (m *Microservice) Register(ctx context.Context) error {
     }
 
     // 开启gRPC与HTTP服务
-    if err := m.server.StartBackground(); err != nil {
+    if err := m.server.StartBackground(ctx); err != nil {
         return err
     }
 

@@ -39,7 +39,7 @@ func (r *Registrar) handleEcho(
 	}
 
 	if r.logger != nil {
-		r.logger.DebugContext(ctx, fmt.Sprintf("mcp echo tool called: text_length=%d", len(args.Text)))
+		r.logger.DebugContext(ctx, "MCP echo tool called")
 	}
 
 	payload, _ := json.Marshal(map[string]any{"echo": args.Text})
