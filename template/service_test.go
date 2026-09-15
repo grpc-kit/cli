@@ -95,7 +95,7 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 	assertContains("modeler/mcp/registrar.go", "func (r *Registrar) Register", "server is nil")
 	assertContains("modeler/mcp/registrar_test.go", "session.CallTool", "session.ReadResource", "session.GetPrompt")
 	assertContains("config/app-dev-local.yaml", "aiconnector:", "mcp_server:")
-	assertContains("go.mod", "go 1.25.0", "github.com/grpc-kit/pkg v0.5.0", "github.com/modelcontextprotocol/go-sdk v1.7.0")
+	assertContains("go.mod", "go 1.25.13", "github.com/grpc-kit/pkg v0.5.0", "github.com/modelcontextprotocol/go-sdk v1.7.0")
 	assertNotContains("go.mod", "github.com/sirupsen/logrus")
 	assertContains("Makefile", ">> synchronize Go module dependencies", "@${GO} mod tidy")
 	assertContains("AGENTS.md", "## Shared Skills", "scripts/skills/skills/generate-release-changelog/SKILL.md")

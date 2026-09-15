@@ -30,6 +30,8 @@
 
 - **Breaking**：`errs.Status.WithLogger` 增加 ctx 首参并删除 `WithLoggerContext`；自定义业务调用需迁移为 `WithLogger(ctx, logger, format, err)`。
 
+- **Changed**：服务模板与 `pkg v0.5.0` 的 `go` 指令提升至 `1.25.13`（随安全补丁升级 grpc v1.83.1、x/net v0.56.0、x/text v0.39.0 并修复 Go 标准库已知漏洞）；生成与升级项目需使用 Go 1.25.13 及以上版本构建。
+
 #### 旧生成项目迁移
 
 升级到 `github.com/grpc-kit/pkg v0.5.0` 时，旧项目需要同步完成以下机械迁移：
