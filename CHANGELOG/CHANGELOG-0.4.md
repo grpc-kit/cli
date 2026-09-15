@@ -24,19 +24,6 @@
   5. 新增 `test/e2e/README.md` 目录规范，含黑盒纯度约束（`test/e2e/` 禁止 import `api/`、`handler/`、`internal/`、`modeler/`）与环境变量覆盖说明；被测服务的运行配置由环境提供（默认 `config/app-dev-local.yaml`），E2E 自身不携带配置
   6. 新增 `make test-e2e` 目标，`make lint` 增加 `go vet -tags=e2e ./test/e2e/...`，GitLab CI 增加手动触发的 `e2e-tests` 作业（配置路径由 `E2E_CONFIG_FILE` 指定）
 
-### Changed
-
-#### grpc-kit/cli 模块
-
-- **Breaking（v0.5.0）**：服务模板日志从 logrus 切换为 Go 标准库 `log/slog`。
-
-  1. `Microservice`、`IndependentCfg`、flow client 与 MCP registrar 的 logger 类型改为 `*slog.Logger`；`GetLogger`、`WithLogger`、`WithWorkflow`、`flow.NewClient` 名称保持不变
-  2. RPC、MCP 和 shutdown 日志改用 slog Context API；`LocalConfig.HTTPHandlerFrontend`、`Deregister` 直接接收 ctx，调用链已有的 ctx 会继续向下传递
-  3. `NewMicroservice` 和 `IndependentCfg.Init` 新增 ctx 参数，基础配置初始化改调 `LocalConfig.Init(ctx)`；服务注册经 `sd.Register(ctx, ...)` 继续传递启动 ctx
-  4. **Breaking（v0.5.0）**：移除临时的 `InitContext`、`DeregisterContext`、`HTTPHandlerFrontendContext` 和 `sd.RegisterContext` 双入口，旧生成项目需为原方法调用补充 ctx；直接实现 `sd.Registry` 的代码需迁移到 `Deregister(ctx)`
-  5. **Breaking（v0.5.0）**：`errs.Status.WithLogger` 直接增加 ctx 首参并删除 `WithLoggerContext`；自定义业务调用需迁移为 `WithLogger(ctx, logger, format, err)`
-  6. 新模板固定 `github.com/grpc-kit/pkg v0.5.0` 并移除 logrus 直接依赖
-
 ## [0.4.4] - 2026-09-01
 
 ### Added

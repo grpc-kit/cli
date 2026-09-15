@@ -1,0 +1,40 @@
+# CHANGELOG-0.5
+
+| 名称         | 说明                     |
+|------------|------------------------|
+| Added      | 添加新功能                  |
+| Changed    | 功能的变更                  |
+| Deprecated | 未来会删除                  |
+| Removed    | 之前为Deprecated状态，此版本被移除 |
+| Fixed      | 功能的修复                  |
+| Security   | 有关安全问题的修复              |
+
+## [Unreleased]
+
+### Changed
+
+#### grpc-kit/cli 模块
+
+- **Breaking**：服务模板日志从 logrus 切换为 Go 标准库 `log/slog`。
+
+  1. `Microservice`、`IndependentCfg`、flow client 与 MCP registrar 的 logger 类型改为 `*slog.Logger`；`GetLogger`、`WithLogger`、`WithWorkflow`、`flow.NewClient` 等 API 名称保持不变
+  2. RPC、MCP 和 shutdown 日志改用 slog Context API；新模板不再直接依赖 `github.com/sirupsen/logrus`
+  3. 新模板固定使用 `github.com/grpc-kit/pkg v0.5.0`
+
+- **Breaking**：初始化、注册、注销和服务启动链路统一直接传递 `context.Context`。
+
+  1. `NewMicroservice(ctx, ...)`、`IndependentCfg.Init(ctx, ...)` 和 `LocalConfig.Init(ctx)` 直接接收启动上下文
+  2. `LocalConfig.HTTPHandlerFrontend(ctx, ...)`、`sd.Register(ctx, ...)`、`LocalConfig.Deregister(ctx)` 与 `sd.Registry.Deregister(ctx)` 直接接收调用方上下文
+  3. `rpc.Server.StartBackground(ctx)` 直接接收启动上下文，使启动等待可以响应取消；旧生成项目中的 `StartBackground()` 调用需补充 ctx
+  4. 移除临时的 `InitContext`、`DeregisterContext`、`HTTPHandlerFrontendContext` 和 `sd.RegisterContext` 双入口，不保留无 ctx 兼容包装
+
+- **Breaking**：`errs.Status.WithLogger` 增加 ctx 首参并删除 `WithLoggerContext`；自定义业务调用需迁移为 `WithLogger(ctx, logger, format, err)`。
+
+#### 旧生成项目迁移
+
+升级到 `github.com/grpc-kit/pkg v0.5.0` 时，旧项目需要同步完成以下机械迁移：
+
+1. 将 logger 类型和构造逻辑从 logrus 改为 `*slog.Logger`
+2. 为 `NewMicroservice`、`Init`、`HTTPHandlerFrontend`、`sd.Register`、`Deregister`、`StartBackground` 和 `WithLogger` 调用补充已有 ctx
+3. 删除对临时 `*Context` 方法及 logrus 兼容入口的调用
+4. 运行代码生成、单元测试与构建，确认自定义 handler、注册流程和关闭流程均已适配新签名
