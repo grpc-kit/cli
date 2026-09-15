@@ -79,16 +79,18 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 			}
 		}
 	}
-	assertContains("handler/register.go", "DO NOT EDIT", "privateMCPHandle()", "HTTPHandlerFrontend(ctx")
-	assertNotContains("handler/register.go", "HTTPHandlerFrontendContext(ctx")
+	assertContains("handler/register.go", "DO NOT EDIT", "privateMCPHandle()", "HTTPHandlerFrontend(ctx", "StartBackground(ctx)")
+	assertNotContains("handler/register.go", "HTTPHandlerFrontendContext(ctx", "StartBackground()")
 	assertContains("handler/private.go", "func (m *Microservice) privateMCPHandle() error", "return fmt.Errorf")
 	assertContains("handler/microservice.go", `"log/slog"`, "logger  *slog.Logger", "NewMicroservice(ctx context.Context", "lc.Init(ctx)")
 	assertNotContains("handler/microservice.go", "lc.InitContext(ctx)")
-	assertContains("handler/rpc_demo.go", "WarnContext(ctx")
+	assertContains("handler/rpc_demo.go", `WarnContext(ctx, "test demo warn: func Demo")`)
+	assertNotContains("handler/rpc_demo.go", "fmt.Sprintf", `"fmt"`)
 	assertContains("handler/shutdown.go", "WarnContext(ctx", "Deregister(ctx)")
 	assertNotContains("handler/shutdown.go", "DeregisterContext(ctx)")
 	assertContains("modeler/independent_cfg.go", "Init(ctx context.Context")
-	assertContains("modeler/mcp/handler.go", "DebugContext(ctx")
+	assertContains("modeler/mcp/handler.go", `DebugContext(ctx, "MCP echo tool called")`)
+	assertNotContains("modeler/mcp/handler.go", "text_length", "fmt.Sprintf(\"mcp echo tool called")
 	assertContains("modeler/mcp/option.go", "WithLogger(logger *slog.Logger)")
 	assertContains("modeler/mcp/registrar.go", "func (r *Registrar) Register", "server is nil")
 	assertContains("modeler/mcp/registrar_test.go", "session.CallTool", "session.ReadResource", "session.GetPrompt")
