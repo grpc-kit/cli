@@ -9,7 +9,7 @@
 | Fixed      | 功能的修复                  |
 | Security   | 有关安全问题的修复              |
 
-## [Unreleased]
+## [0.5.0] - 2026-09-16
 
 ### Added
 
