@@ -19,6 +19,7 @@ description: 维护 grpc-kit CLI 服务模板、project migrate 兼容资产和�
 - `TargetCLIVersion` 只表示执行迁移的正式 CLI 版本；pkg 目标版本独立记录。
 - 只有首行完整 grpc-kit-cli `DO NOT EDIT` marker 的已有普通文件可进入 Change Plan。
 - 不自动修改用户代码、`go.mod`、`go.sum`，不创建、删除、重命名或 chmod 项目文件。
+- 用户可以另行使用共享技能 `migrate-logrus-to-slog` 完成业务源码迁移；该授权属于 AI 编辑工作流，不得反向扩大 `project migrate` 的 Change Plan。
 - 兼容资产只引用来源 fixture 已有的项目内符号；新功能走新建模板或独立 feature 流程。
 - 正式 pkg 测试不使用本地 `replace`，也不使用不可复现的 `@latest`。
 - 不擅自修改 `VERSION`、创建 tag、发布产物或对脏的真实服务执行 apply。

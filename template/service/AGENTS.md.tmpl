@@ -13,6 +13,7 @@ This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, e
 - Run `make skills` to install or update grpc-kit shared skills under `scripts/skills/skills`.
 - When a task matches a shared skill, read its complete `SKILL.md` before acting and follow any referenced resources it requires.
 - For release notes, version summaries, or CHANGELOG updates, use `scripts/skills/skills/generate-release-changelog/SKILL.md`.
+- For migrating an older generated service from logrus to `log/slog`, use `scripts/skills/skills/migrate-logrus-to-slog/SKILL.md`; let `project migrate` handle CLI-managed files first when available.
 - If the shared skill directory is unavailable, report that it has not been initialized before falling back to repository conventions.
 
 ## Service Skills

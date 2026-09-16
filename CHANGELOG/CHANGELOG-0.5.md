@@ -17,6 +17,7 @@
 - 首期迁移目标固定为正式 `github.com/grpc-kit/pkg v0.5.0`。命令严格区分 CLI marker 版本和 pkg 版本，不修改 `go.mod`、业务源码及其他用户管理文件，也不提供可能被误解为 CLI 自更新的根级 `upgrade`/`update` alias。
 - `grpc-kit-cli new` 新增 `--output` / `-d`，可显式指定项目输出目录；`grpc-kit-cli version` 新增 `--short`，便于发布脚本只读取版本号。
 - 新增普通 CLI、冻结迁移资产和最新服务模板三层 CI 门禁；最新模板门禁会完整执行代码生成、单测和构建，且不使用本地 module `replace`。
+- 新服务的 Agent 指引增加共享技能 `migrate-logrus-to-slog` 入口，用于由 AI 完成旧服务用户源码的语义迁移；`project migrate` 的托管文件写入边界保持不变。
 
 ### Changed
 
