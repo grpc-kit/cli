@@ -22,16 +22,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of grpc-kit-cli",
-	Long:  `All software has versions. This is grpc-kit-cli's.`,
-	RunE:  runFuncVersion,
-}
-
-func init() {
-	rootCmd.AddCommand(versionCmd)
+func newVersionCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of grpc-kit-cli",
+		Long:  `All software has versions. This is grpc-kit-cli's.`,
+		RunE:  runFuncVersion,
+	}
 }
 
 func runFuncVersion(cmd *cobra.Command, args []string) error {
