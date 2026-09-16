@@ -11,6 +11,11 @@
 
 ## [Unreleased]
 
+### Added
+
+- 新增 `grpc-kit-cli project migrate [path]`，默认只读预览旧项目的托管文件变更和人工迁移清单；`--apply` 仅在正式稳定版 CLI、clean Git 工作树和输入摘要复核通过时更新已有托管文件。
+- 首期迁移目标固定为正式 `github.com/grpc-kit/pkg v0.5.0`。命令严格区分 CLI marker 版本和 pkg 版本，不修改 `go.mod`、业务源码及其他用户管理文件，也不提供可能被误解为 CLI 自更新的根级 `upgrade`/`update` alias。
+
 ### Changed
 
 #### grpc-kit/cli 模块
