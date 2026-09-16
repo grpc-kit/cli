@@ -104,6 +104,9 @@ func TestWritePlanIncludesManualActionLocation(t *testing.T) {
 	if !strings.Contains(output.String(), "Manual action [context_call] handler/register.go:38: pass context") {
 		t.Fatalf("output = %q", output.String())
 	}
+	if !strings.Contains(output.String(), "Manual actions: 1\n  [context_call]: 1") {
+		t.Fatalf("output does not include grouped manual-action counts: %q", output.String())
+	}
 	if !strings.Contains(output.String(), "Project compatibility: not verified") {
 		t.Fatalf("output does not explain compatibility status: %q", output.String())
 	}

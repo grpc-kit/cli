@@ -17,6 +17,7 @@ package projectmigrate
 import (
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/pmezard/go-difflib/difflib"
 )
@@ -29,6 +30,9 @@ func WritePlan(output io.Writer, plan Plan) error {
 		return err
 	}
 	if err := writeDiagnostics(output, "Apply blocked", plan.ApplyBlockers); err != nil {
+		return err
+	}
+	if err := writeDiagnosticSummary(output, "Manual actions", plan.ManualActions); err != nil {
 		return err
 	}
 	if err := writeDiagnostics(output, "Manual action", plan.ManualActions); err != nil {
@@ -61,6 +65,30 @@ func WritePlan(output io.Writer, plan Plan) error {
 			return err
 		}
 		if _, err := io.WriteString(output, diff); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writeDiagnosticSummary(output io.Writer, label string, diagnostics []Diagnostic) error {
+	if len(diagnostics) == 0 {
+		return nil
+	}
+	if _, err := fmt.Fprintf(output, "%s: %d\n", label, len(diagnostics)); err != nil {
+		return err
+	}
+	counts := make(map[string]int)
+	for _, diagnostic := range diagnostics {
+		counts[diagnostic.Code]++
+	}
+	codes := make([]string, 0, len(counts))
+	for code := range counts {
+		codes = append(codes, code)
+	}
+	sort.Strings(codes)
+	for _, code := range codes {
+		if _, err := fmt.Fprintf(output, "  [%s]: %d\n", code, counts[code]); err != nil {
 			return err
 		}
 	}
