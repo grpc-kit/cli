@@ -5,6 +5,7 @@ GOPATH          := $(shell ${GO} env GOPATH)
 GOOS            ?= $(shell ${GO} env GOOS)
 GOARCH          ?= $(shell ${GO} env GOARCH)
 GOBUILD         := ${GO} build
+PKG_COMPAT_VERSION ?= v0.5.0
 
 # 自动化版本号
 GIT_COMMIT	:= $(shell git rev-parse HEAD)
@@ -45,6 +46,17 @@ build-all: clean ## Build all binaries that support the operating system.
 docker-build: ## Build docker image with the application.
 	@echo ">> docker build"
 	@docker buildx build --platform linux/amd64,linux/arm64 ./ -t ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION} --push
+
+##@ Test
+
+.PHONY: test
+test: ## Run the complete CLI package test set.
+	@${GO} test -mod=readonly ./cmd ./internal/projectmigrate ./template -count=1
+	@${GO} vet ./cmd ./internal/projectmigrate ./template
+
+.PHONY: test-compatibility
+test-compatibility: ## Compile frozen migration assets against PKG_COMPAT_VERSION.
+	@GRPC_KIT_RUN_COMPATIBILITY_TEST=1 GRPC_KIT_COMPAT_PKG_VERSION=${PKG_COMPAT_VERSION} ${GO} test ./internal/projectmigrate -run '^TestCompatibilityAssetsCompileAgainstReleasedPkg$$' -count=1 -v
 
 ##@ Build Dependencies
 
