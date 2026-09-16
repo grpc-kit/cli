@@ -24,28 +24,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newCmd represents the new command
-var newCmd = &cobra.Command{
-	Use:   "new",
-	Short: "Create a new code templates for your product",
-	Long: `Create a new code templates for your product. It will only be used when 
+func newNewCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "new",
+		Short: "Create a new code templates for your product",
+		Long: `Create a new code templates for your product. It will only be used when
 it is newly created. For example:
 
 ./grpc-kit-cli new -t service -o default -p opsaid -s test1
 `,
-	RunE:          runFuncNew,
-	SilenceUsage:  true,
-	SilenceErrors: false,
-}
-
-func init() {
-	rootCmd.AddCommand(newCmd)
+		RunE:          runFuncNew,
+		SilenceUsage:  true,
+		SilenceErrors: false,
+	}
 
 	// 只在该command下生效的参数
-	newCmd.Flags().StringVar(&cfgType.Template.Service.APIVersion,
+	cmd.Flags().StringVar(&cfgType.Template.Service.APIVersion,
 		"api-version", "v1", "api version, like: v1alpha1, v1beta1, v1")
-	newCmd.Flags().StringVarP(&cfgType.Template.Service.Organization,
+	cmd.Flags().StringVarP(&cfgType.Template.Service.Organization,
 		"organization", "o", "grpc-kit", "the company or department where the product is located")
+
+	return cmd
 }
 
 func runFuncNew(cmd *cobra.Command, args []string) error {
