@@ -34,7 +34,12 @@ mkdir -p $GOPATH/src/github.com/opsaid
 cd $GOPATH/src/github.com/opsaid
 
 grpc-kit-cli new -t service -p opsaid -s test1
+
+# 可选：指定输出目录；目标路径已存在时命令会拒绝覆盖
+grpc-kit-cli new -t service -p opsaid -s test1 --output ./services/test1
 ```
+
+`new` 会先在同级临时目录完成全部渲染，再一次性发布目标目录。渲染或写入失败不会留下半生成项目。
 
 ### 下载依赖的环境
 
@@ -147,4 +152,25 @@ OK
 
 ```shell
 # curl -u user1:grpc-kit-cli http://127.0.0.1:8080/api/demo
+```
+
+## 发布与兼容验证
+
+```shell
+# CLI 全量单测与 vet
+make test
+
+# 冻结迁移资产对最低支持 pkg 的兼容验证
+make test-compatibility PKG_COMPAT_VERSION=v0.5.0
+
+# 最新 new 模板的生成、代码生成、单测与构建验证
+make test-template-compatibility
+```
+
+`test-compatibility` 验证历史迁移资产，不会因以后发布 `pkg v0.5.8` 而失效。发布同一兼容系列的新补丁时，应保留 `v0.5.0` 最低基线，并额外对候选版本执行一次；只有引入新的破坏性目标时才新增迁移资产族。
+
+脚本需要稳定消费 CLI 版本号时可使用：
+
+```shell
+grpc-kit-cli version --short
 ```
