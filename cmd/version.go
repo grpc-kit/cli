@@ -18,28 +18,38 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/grpc-kit/pkg/vars"
+	"github.com/grpc-kit/cli/internal/buildinfo"
 	"github.com/spf13/cobra"
 )
 
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number of grpc-kit-cli",
-	Long:  `All software has versions. This is grpc-kit-cli's.`,
-	RunE:  runFuncVersion,
+func newVersionCommand() *cobra.Command {
+	short := false
+	cmd := &cobra.Command{
+		Use:         "version",
+		Short:       "Print the version number of grpc-kit-cli",
+		Long:        `All software has versions. This is grpc-kit-cli's.`,
+		Args:        cobra.NoArgs,
+		Annotations: map[string]string{skipUserConfigAnnotation: "true"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runFuncVersion(cmd, short)
+		},
+	}
+	cmd.Flags().BoolVar(&short, "short", false, "print only the release version")
+	return cmd
 }
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
-}
+func runFuncVersion(cmd *cobra.Command, short bool) error {
+	info := buildinfo.Get()
+	if short {
+		_, err := fmt.Fprintln(cmd.OutOrStdout(), info.ReleaseVersion)
+		return err
+	}
 
-func runFuncVersion(cmd *cobra.Command, args []string) error {
-	rawBody, err := json.MarshalIndent(vars.GetVersion(), "", "  ")
+	rawBody, err := json.MarshalIndent(info, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(string(rawBody))
-	return nil
+	_, err = fmt.Fprintln(cmd.OutOrStdout(), string(rawBody))
+	return err
 }

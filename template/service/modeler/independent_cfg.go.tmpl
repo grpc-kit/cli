@@ -3,10 +3,7 @@ package modeler
 import (
 	"context"
 	"fmt"
-
-	entsql "entgo.io/ent/dialect/sql"
-	"github.com/grpc-kit/pkg/cfg"
-	"github.com/sirupsen/logrus"
+	"log/slog"
 
 	"{{ .Global.Repository }}/modeler/ent"
 	"{{ .Global.Repository }}/modeler/flow"
@@ -14,49 +11,15 @@ import (
 
 // IndependentCfg 个性配置
 type IndependentCfg struct {
-	logger *logrus.Entry
+	logger *slog.Logger
 	db     *ent.Client
 	flow   *flow.Client
 
 	Name string `mapstructure:"name"`
 }
 
-// ClientIndependentOption 用户自定义初始化资源选项
-type ClientIndependentOption func(cfg *IndependentCfg)
-
-// WithLogger 传递日志实例
-func WithLogger(logger *logrus.Entry) ClientIndependentOption {
-	return func(cfg *IndependentCfg) {
-		cfg.logger = logger
-	}
-}
-
-// WithDatabaseEntDriver 传递 ent 数据库实例
-func WithDatabaseEntDriver(driver *entsql.Driver) ClientIndependentOption {
-	return func(cfg *IndependentCfg) {
-		client := ent.NewClient(ent.Driver(driver))
-		cfg.db = client
-	}
-}
-
-// WithWorkflow 传递流水线配置
-func WithWorkflow(logger *logrus.Entry, fcc *cfg.FlowClientConfig) ClientIndependentOption {
-	return func(cfg *IndependentCfg) {
-		if fcc != nil {
-			client, err := flow.NewClient(logger, fcc)
-			if err != nil {
-				panic(err)
-			}
-
-			cfg.flow = client
-		}
-	}
-}
-
 // Init 用于初始化实例
-func (i *IndependentCfg) Init(opts ...ClientIndependentOption) error {
-	ctx := context.Background()
-
+func (i *IndependentCfg) Init(ctx context.Context, opts ...ClientIndependentOption) error {
 	for _, opt := range opts {
 		opt(i)
 	}

@@ -1,0 +1,90 @@
+package mcp
+
+import (
+	"fmt"
+	"log/slog"
+
+	mcpserver "github.com/grpc-kit/pkg/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"{{ .Global.Repository }}/modeler/ent"
+	"{{ .Global.Repository }}/modeler/flow"
+)
+
+// 保留 mcpserver 导入以演示「Authorization header 透传」用法（见各 handler 注释示例）。
+// 业务开发者在 handler 中实际调用 mcpserver.AuthHeaderFromContext(ctx) 后可删除此行。
+var _ = mcpserver.AuthHeaderFromContext
+
+// Registrar 持有业务依赖，实现自定义 MCP 资源注册（Tools / Resources / Prompts）。
+// 业务开发者可在此添加 LLM client、RPC client 等依赖字段及对应 With* 选项。
+type Registrar struct {
+	logger *slog.Logger
+	db     *ent.Client
+	flow   *flow.Client
+}
+
+// RegistrarOption 是 Registrar 的构造选项（Functional Options 模式），
+// 与 modeler.ClientIndependentOption 风格一致。
+type RegistrarOption func(*Registrar)
+
+// NewRegistrar 构造自定义 MCP 资源注册器。
+// 零参数时所有依赖为零值（适用于不依赖 db/flow 的纯计算型资源）；
+// 通过 With* 选项按需注入依赖。
+func NewRegistrar(opts ...RegistrarOption) *Registrar {
+	r := &Registrar{}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
+}
+
+// Register 向 SDK MCP Server 注册业务原生 MCP 资源。
+// server 参数为 wrapper.MCPServer() 返回的 SDK 实例，
+// 其上提供 AddTool / AddResource / AddResourceTemplate / AddPrompt 四个方法，按需调用。
+func (r *Registrar) Register(server *sdkmcp.Server) error {
+	if server == nil {
+		return fmt.Errorf("register custom MCP resources: server is nil")
+	}
+
+	// ── Tools ──────────────────────────────────────────
+	// 示例 Tool：echo（业务开发者可替换为实际 Tool）
+	server.AddTool(&sdkmcp.Tool{
+		Name:        "{{ .Global.ShortName }}_echo",
+		Description: "回显输入文本（自定义 MCP Tool 示例）",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"text": map[string]any{
+					"type":        "string",
+					"description": "待回显的文本",
+				},
+			},
+			"required": []string{"text"},
+		},
+	}, r.handleEcho)
+
+	// ── Resources ──────────────────────────────────────
+	// 示例 Resource：服务配置信息（业务开发者可替换为实际 Resource）
+	server.AddResource(&sdkmcp.Resource{
+		URI:         "{{ .Global.ShortName }}://config",
+		Name:        "config",
+		Description: "服务配置信息（自定义 MCP Resource 示例）",
+		MIMEType:    "application/json",
+	}, r.handleReadConfig)
+
+	// ── Prompts ────────────────────────────────────────
+	// 示例 Prompt：问候模板（业务开发者可替换为实际 Prompt）
+	server.AddPrompt(&sdkmcp.Prompt{
+		Name:        "{{ .Global.ShortName }}_greeting",
+		Description: "生成问候语（自定义 MCP Prompt 示例）",
+		Arguments: []*sdkmcp.PromptArgument{
+			{
+				Name:        "name",
+				Description: "被问候者的名称",
+				Required:    true,
+			},
+		},
+	}, r.handleGreeting)
+
+	return nil
+}

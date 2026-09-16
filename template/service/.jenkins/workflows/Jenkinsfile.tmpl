@@ -80,6 +80,29 @@ pipeline {
            cd source
            make test
         '''
+
+        // TODO; 如需接入黑盒接口 E2E（test/e2e/），放开以下步骤
+        // 注意：E2E 需要服务先在后台运行，并在结束时回收进程；
+        //      E2E_CONFIG_FILE 指向本环境可读的运行配置，凭据需与其 http_users 一致
+        // sh '''
+        //    cd source
+        //    export E2E_CONFIG_FILE=config/app-dev-local.yaml
+        //    export E2E_BASE_URL=http://127.0.0.1:8080
+        //    export E2E_BASIC_USERNAME=user1
+        //    export E2E_BASIC_PASSWORD=grpc-kit-cli
+        //    test -f "${E2E_CONFIG_FILE}" || { echo "missing ${E2E_CONFIG_FILE}"; exit 1; }
+        //    make build
+        //    ./build/service -c "${E2E_CONFIG_FILE}" > e2e-service.log 2>&1 &
+        //    echo $! > e2e-service.pid
+        //    source scripts/env
+        //    for i in $(seq 1 30); do
+        //      curl -sf "${E2E_BASE_URL}/api/healthz?service=${SERVICE_CODE}" > /dev/null && break
+        //      test "${i}" = "30" && { cat e2e-service.log; exit 1; }
+        //      sleep 1
+        //    done
+        //    make test-e2e || { kill $(cat e2e-service.pid); exit 1; }
+        //    kill $(cat e2e-service.pid)
+        // '''
       }
     }
 

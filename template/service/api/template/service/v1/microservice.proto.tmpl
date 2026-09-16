@@ -5,6 +5,7 @@ package {{ .Global.ProtoPackage }};
 option go_package = "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }};{{ .Global.ShortName }}{{ .Template.Service.APIVersion }}";
 
 // 同服务内的 proto 文件使用相对路径引用，既不包含代码仓库前缀
+//import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/microservice.common.proto";
 import "api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}/demo.proto";
 
 // 引入依赖的外部 proto 文件
@@ -12,6 +13,20 @@ import "github.com/grpc-kit/api/known/status/v1/response.proto";
 
 // 该微服务支持的 RPC 方法定义
 service {{ title .Global.ServiceTitle }} {
+  // 内置服务，健康检查
   rpc HealthCheck(grpc_kit.api.known.status.v1.HealthCheckRequest) returns (grpc_kit.api.known.status.v1.HealthCheckResponse) {}
+
+  // 参考示例，书籍管理，实现相同一组任务的方法整合在一起，前后均需空行隔开
+  // rpc GetBook(GetBookRequest) returns (Book) {}
+  // rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {}
+  // rpc CreateBook(CreateBookRequest) returns (Book) {}
+  // rpc UpdateBook(CreateBookRequest) returns (Book) {}
+  // rpc DeleteBook(DeleteBookRequest) returns (google.protobuf.Empty) {}
+  // rpc ArchiveBook(ArchiveBookRequest) returns (ArchiveBookResponse) {}
+
+  // 示例实现，可以删除
   rpc Demo(DemoRequest) returns (DemoResponse) {}
+
+  // xx 管理，实现相同一组任务的方法整合在一起
+  // ...
 }

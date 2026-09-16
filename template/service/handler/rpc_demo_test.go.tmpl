@@ -1,7 +1,6 @@
 package handler
 
 import (
-    "context"
     "testing"
 
     pb "{{ .Global.Repository }}/api/{{ .Global.ProductCode }}/{{ .Global.ShortName }}/{{ .Template.Service.APIVersion }}"
@@ -12,7 +11,7 @@ func TestDemo(t *testing.T) {
         Uuid: "99feafb5-bed6-4daf-927a-69a2ab80c485",
     }
 
-    resp, err := m.Demo(context.TODO(), req)
+    resp, err := m.Demo(t.Context(), req)
     if err != nil {
         t.Errorf("Demo test fail: %v", err)
     }

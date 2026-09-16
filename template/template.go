@@ -7,7 +7,7 @@ import (
 	"github.com/grpc-kit/cli/config"
 )
 
-//go:embed service/*
+//go:embed service/* all:service/.agents
 var Assets embed.FS
 
 const (
@@ -18,6 +18,7 @@ const (
 // Template 代码模版的接口定义
 type Template interface {
 	Generate() error
+	GenerateTo(output string) error
 }
 
 // New xx

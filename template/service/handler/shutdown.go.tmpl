@@ -9,9 +9,9 @@ import (
 
 // Shutdown 优雅关闭gRPC与HTTP服务
 func (m *Microservice) Shutdown(ctx context.Context) error {
-    m.logger.Warnf("Shutdown server begin")
+    m.logger.WarnContext(ctx, "Shutdown server begin")
 
-    if err := m.baseCfg.Deregister(); err != nil {
+    if err := m.baseCfg.Deregister(ctx); err != nil {
         return err
     }
 
@@ -24,6 +24,6 @@ func (m *Microservice) Shutdown(ctx context.Context) error {
         return err
     }
 
-    m.logger.Warnf("Shutdown server end")
+    m.logger.WarnContext(ctx, "Shutdown server end")
     return nil
 }

@@ -14,8 +14,14 @@
 
 package main
 
-import "github.com/grpc-kit/cli/cmd"
+import (
+	"os"
+
+	"github.com/grpc-kit/cli/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

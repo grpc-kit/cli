@@ -3,9 +3,11 @@
 package handler
 
 import (
+    "context"
+    "log/slog"
+
     "github.com/grpc-kit/pkg/cfg"
     "github.com/grpc-kit/pkg/rpc"
-    "github.com/sirupsen/logrus"
 
     "{{ .Global.Repository }}/modeler"
 )
@@ -15,15 +17,15 @@ type Microservice struct {
     code    string                  // 服务代码
     server  *rpc.Server             // 服务定义
     client  *rpc.Client             // 服务调用
-    logger  *logrus.Entry           // 全局日志
+    logger  *slog.Logger            // 全局日志
     baseCfg *cfg.LocalConfig        // 基础配置
     thisCfg *modeler.IndependentCfg // 个性配置
 }
 
 // NewMicroservice 全局只实例化一次
-func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
+func NewMicroservice(ctx context.Context, lc *cfg.LocalConfig) (*Microservice, error) {
     // 基础配置初始化
-    if err := lc.Init(); err != nil {
+    if err := lc.Init(ctx); err != nil {
         return nil, err
     }
 
@@ -58,7 +60,7 @@ func NewMicroservice(lc *cfg.LocalConfig) (*Microservice, error) {
     }
 
     // 自定义配置初始化
-    if err = m.thisCfg.Init(opts...); err != nil {
+    if err = m.thisCfg.Init(ctx, opts...); err != nil {
         return m, err
     }
 

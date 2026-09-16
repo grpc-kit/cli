@@ -1,0 +1,13 @@
+//go:build e2e
+
+// demo 域包入口：接入 fixture.Main（探活 guard）。
+// 运行前提：本地服务已启动（make run）；运行方式：make test-e2e。
+package demo
+
+import (
+	"testing"
+
+	"{{ .Global.Repository }}/test/e2e/fixture"
+)
+
+func TestMain(m *testing.M) { fixture.Main(m) }

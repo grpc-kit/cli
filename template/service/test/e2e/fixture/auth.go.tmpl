@@ -1,0 +1,91 @@
+//go:build e2e
+
+// 调用主体引导：模版默认认证方式为 HTTP Basic（config/app-dev-local.yaml 的
+// security.authentication.http_users），用例通过 RequireAuthed(t) 复用同一份凭据；
+// 该文件同时是业务测试资源工厂的挂载点。
+package fixture
+
+import (
+	"sync"
+	"testing"
+
+	"{{ .Global.Repository }}/test/e2e/client"
+)
+
+// 开发环境（config/app-dev-local.yaml）的 HTTP Basic 账号。
+// 可用环境变量覆盖：E2E_BASIC_USERNAME / E2E_BASIC_PASSWORD。
+const (
+	defaultBasicUsername = "user1"
+	defaultBasicPassword = "grpc-kit-cli"
+)
+
+// AuthedFixture 持有已认证的客户端，并作为业务测试资源工厂的挂载点。
+type AuthedFixture struct {
+	Env    *Env
+	Client *client.Client
+}
+
+var (
+	authedOnce sync.Once
+	authedFix  *AuthedFixture
+)
+
+// Authed 返回进程级已认证 fixture（首次调用时构造）。
+func Authed() *AuthedFixture {
+	env := Init()
+	authedOnce.Do(func() {
+		authedFix = &AuthedFixture{
+			Env: env,
+			Client: client.New(
+				client.WithBaseURL(env.BaseURL),
+				client.WithBasicAuth(
+					getenv("E2E_BASIC_USERNAME", defaultBasicUsername),
+					getenv("E2E_BASIC_PASSWORD", defaultBasicPassword),
+				),
+			),
+		}
+	})
+	return authedFix
+}
+
+// RequireAuthed 返回已认证 fixture。
+//
+// Basic 凭据无需与服务交互即可构造，因此当前不会失败；保留 *testing.T 入参是为了
+// 给「需要先换取令牌」的项目留统一扩展点 —— 例如接入 OIDC 后在此登录取 access_token，
+// 用 client.WithToken 构造，并把失败收敛成一次 t.Fatalf，而不是让每个用例各自报 401。
+func RequireAuthed(t *testing.T) *AuthedFixture {
+	t.Helper()
+	return Authed()
+}
+
+// Anonymous 返回不带任何凭据的客户端，用于鉴权负例。
+func Anonymous() *client.Client {
+	return client.New(client.WithBaseURL(Init().BaseURL))
+}
+
+// 业务资源工厂挂载点：新增有状态资源请仿照以下形态 —— 创建即注册 t.Cleanup，
+// 保证用例失败也能回收；清理失败只 t.Logf，不中断其他清理。
+// 建议按域拆到独立文件（如 fixture/order.go），避免本文件膨胀。
+//
+//	func (a *AuthedFixture) CreateOrder(t *testing.T, code string) Order {
+//		t.Helper()
+//		ctx := context.Background()
+//		resp, err := a.Client.Do(ctx, http.MethodPost, "/api/orders",
+//			map[string]any{"order": map[string]string{"code": code}})
+//		if err != nil {
+//			t.Fatalf("创建订单 %s 失败: %v", code, err)
+//		}
+//		if !resp.IsOK() {
+//			t.Fatalf("创建订单 %s 失败: HTTP %d %s", code, resp.StatusCode, resp.RPCMessage())
+//		}
+//		var order Order
+//		if err := resp.Decode(&order); err != nil {
+//			t.Fatalf("解码订单响应失败: %v（%s）", err, resp.Body)
+//		}
+//		t.Cleanup(func() {
+//			if _, err := a.Client.Do(context.Background(), http.MethodDelete, "/api/orders/"+code, nil); err != nil {
+//				t.Logf("清理订单 %s 失败: %v", code, err)
+//			}
+//		})
+//		return order
+//	}

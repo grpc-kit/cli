@@ -1,6 +1,7 @@
 package handler
 
 import (
+    "context"
     "testing"
 
     "github.com/grpc-kit/pkg/cfg"
@@ -20,7 +21,7 @@ func init() {
         Independent: modeler.IndependentCfg{},
     }
 
-    s, err := NewMicroservice(lc)
+    s, err := NewMicroservice(context.Background(), lc)
     if err != nil {
         panic(err)
     }

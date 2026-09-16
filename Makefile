@@ -4,7 +4,8 @@ GORUN           := ${GO} run
 GOPATH          := $(shell ${GO} env GOPATH)
 GOOS            ?= $(shell ${GO} env GOOS)
 GOARCH          ?= $(shell ${GO} env GOARCH)
-GOBUILD         := ${GO} build
+GOBUILD         := ${GO} build -mod=readonly
+PKG_COMPAT_VERSION ?= v0.5.0
 
 # 自动化版本号
 GIT_COMMIT	:= $(shell git rev-parse HEAD)
@@ -12,12 +13,12 @@ GIT_BRANCH	:= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null)
 BUILD_DATE	:= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
 COMMIT_DATE	:= $(shell git --no-pager log -1 --format='%ct')
 RELEASE_VERSION ?= $(shell cat VERSION)
-BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/pkg/vars.Appname=grpc-kit-cli' \
-	-X 'github.com/grpc-kit/pkg/vars.GitCommit=${GIT_COMMIT}' \
-	-X 'github.com/grpc-kit/pkg/vars.GitBranch=${GIT_BRANCH}' \
-	-X 'github.com/grpc-kit/pkg/vars.BuildDate=${BUILD_DATE}' \
-	-X 'github.com/grpc-kit/pkg/vars.CommitUnixTime=${COMMIT_DATE}' \
-	-X 'github.com/grpc-kit/pkg/vars.ReleaseVersion=${RELEASE_VERSION}'"
+BUILD_LD_FLAGS 	:= "-X 'github.com/grpc-kit/cli/internal/buildinfo.AppName=grpc-kit-cli' \
+	-X 'github.com/grpc-kit/cli/internal/buildinfo.GitCommit=${GIT_COMMIT}' \
+	-X 'github.com/grpc-kit/cli/internal/buildinfo.GitBranch=${GIT_BRANCH}' \
+	-X 'github.com/grpc-kit/cli/internal/buildinfo.BuildDate=${BUILD_DATE}' \
+	-X 'github.com/grpc-kit/cli/internal/buildinfo.CommitUnixTime=${COMMIT_DATE}' \
+	-X 'github.com/grpc-kit/cli/internal/buildinfo.ReleaseVersion=${RELEASE_VERSION}'"
 
 # 自定义变量
 BUILD_GOOS		?= $(shell ${GO} env GOOS)
@@ -45,6 +46,21 @@ build-all: clean ## Build all binaries that support the operating system.
 docker-build: ## Build docker image with the application.
 	@echo ">> docker build"
 	@docker buildx build --platform linux/amd64,linux/arm64 ./ -t ccr.ccs.tencentyun.com/grpc-kit/cli:${RELEASE_VERSION} --push
+
+##@ Test
+
+.PHONY: test
+test: ## Run the complete CLI package test set.
+	@${GO} test -mod=readonly ./... -count=1
+	@${GO} vet ./...
+
+.PHONY: test-compatibility
+test-compatibility: ## Compile frozen migration assets against PKG_COMPAT_VERSION.
+	@GRPC_KIT_RUN_COMPATIBILITY_TEST=1 GRPC_KIT_COMPAT_PKG_VERSION=${PKG_COMPAT_VERSION} ${GO} test ./internal/projectmigrate -run '^TestCompatibilityAssetsCompileAgainstReleasedPkg$$' -count=1 -v
+
+.PHONY: test-template-compatibility
+test-template-compatibility: ## Generate the latest service template and compile it against the released pkg.
+	@GRPC_KIT_RUN_TEMPLATE_COMPATIBILITY_TEST=1 ${GO} test ./template -run '^TestGeneratedServiceCompilesAgainstReleasedPkg$$' -count=1 -v -timeout 20m
 
 ##@ Build Dependencies
 

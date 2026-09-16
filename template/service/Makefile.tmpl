@@ -52,6 +52,8 @@ generate: precheck ## Generate code from proto files.
 	@./scripts/version.sh update
 	@echo ">> generation code from proto files"
 	@./scripts/generate.sh
+	@echo ">> synchronize Go module dependencies"
+	@${GO} mod tidy
 	@echo ">> generation database schema"
 	@./scripts/generate.sh gen_ent
 
@@ -60,11 +62,33 @@ lint: generate ## Run go fmt and vet against code.
 	@${GO} mod tidy
 	@${GO} fmt ./...
 	@${GO} vet ./...
+	@${GO} vet -tags=e2e ./test/e2e/...
 
 .PHONY: test
 test: generate ## Run unit tests.
 	@${GO} mod tidy
 	@${GO} test ./... -timeout 3m -v -gcflags=-l -cover=true
+
+.PHONY: test-e2e
+test-e2e: ## Run black-box API e2e tests against a running local server (make run).
+	@${GO} test -tags=e2e -p 1 -count=1 ./test/e2e/... -timeout 5m -v
+
+.PHONY: skills
+skills: ## Install or update grpc-kit common skills.
+	@if [ ! -d ".git" ]; then \
+		echo "==> Initializing git repository..."; \
+		git init; \
+	fi
+	@if [ ! -e "scripts/skills/.git" ]; then \
+		echo "==> scripts/skills not found or not a submodule. Initializing..."; \
+		if [ -d "scripts/skills" ]; then rm -rf scripts/skills; fi; \
+		git submodule add -f https://github.com/grpc-kit/skills.git scripts/skills; \
+		git submodule update --init --recursive; \
+	else \
+		echo "==> scripts/skills exists. Syncing with remote (main)..."; \
+		git submodule update --remote --rebase scripts/skills; \
+	fi
+	@echo "==> Skills are up-to-date."
 
 ##@ Build
 

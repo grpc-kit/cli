@@ -29,12 +29,18 @@ func (m *Microservice) Register(ctx context.Context) error {
 	}
 
     // 注册前端托管静态数据
-    if err = m.baseCfg.HTTPHandlerFrontend(mux, public.Assets); err != nil {
+    if err = m.baseCfg.HTTPHandlerFrontend(ctx, mux, public.Assets); err != nil {
         return err
     }
 
     // 这里添加其他自定义实现
     if err := m.privateHTTPHandle(mux); err != nil {
+        return err
+    }
+
+    // 注册自定义 MCP 资源（Tools/Resources/Prompts，在 private.go 中实现）
+    // 此时 HTTPHandlerFrontend 已同步完成 AutoBridge，自定义资源与 AutoBridge Tool 共存
+    if err := m.privateMCPHandle(); err != nil {
         return err
     }
 
@@ -44,7 +50,7 @@ func (m *Microservice) Register(ctx context.Context) error {
     }
 
     // 开启gRPC与HTTP服务
-    if err := m.server.StartBackground(); err != nil {
+    if err := m.server.StartBackground(ctx); err != nil {
         return err
     }
 
