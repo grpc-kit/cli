@@ -1,12 +1,32 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"testing"
 
-	"github.com/grpc-kit/pkg/vars"
+	"github.com/grpc-kit/cli/internal/buildinfo"
 )
+
+func TestVersionCommandSkipsUserConfig(t *testing.T) {
+	loaded := false
+	cmd := newRootCommand(func() error {
+		loaded = true
+		return errors.New("user config must not be loaded")
+	})
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(io.Discard)
+	cmd.SetArgs([]string{"version", "--short"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if loaded {
+		t.Fatal("version command loaded user generation config")
+	}
+}
 
 func TestRootCommandReturnsCommandErrors(t *testing.T) {
 	cmd := newRootCommand(func() error { return nil })
@@ -20,9 +40,9 @@ func TestRootCommandReturnsCommandErrors(t *testing.T) {
 }
 
 func TestProjectCommandsSkipUserConfig(t *testing.T) {
-	previous := vars.ReleaseVersion
-	vars.ReleaseVersion = "0.3.9-beta.1"
-	t.Cleanup(func() { vars.ReleaseVersion = previous })
+	previous := buildinfo.ReleaseVersion
+	buildinfo.ReleaseVersion = "0.3.9-beta.1"
+	t.Cleanup(func() { buildinfo.ReleaseVersion = previous })
 
 	configErr := errors.New("user config must not be loaded")
 	loaded := false

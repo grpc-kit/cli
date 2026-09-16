@@ -17,8 +17,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/grpc-kit/cli/internal/buildinfo"
 	"github.com/grpc-kit/cli/internal/projectmigrate"
-	"github.com/grpc-kit/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +40,7 @@ func newProjectMigrateCommand() *cobra.Command {
 			}
 
 			if options.apply {
-				if _, err := projectmigrate.ValidateTargetCLIVersion(vars.ReleaseVersion); err != nil {
+				if _, err := projectmigrate.ValidateTargetCLIVersion(buildinfo.ReleaseVersion); err != nil {
 					return fmt.Errorf("refuse --apply: %w", err)
 				}
 			}
@@ -53,7 +53,7 @@ func newProjectMigrateCommand() *cobra.Command {
 }
 
 func runFuncProjectMigrate(cmd *cobra.Command, projectPath string, options projectMigrateOptions) error {
-	plan, err := projectmigrate.BuildPlan(projectPath, vars.ReleaseVersion)
+	plan, err := projectmigrate.BuildPlan(projectPath, buildinfo.ReleaseVersion)
 	if err != nil {
 		return err
 	}

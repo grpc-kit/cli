@@ -97,7 +97,7 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 	assertContains("modeler/mcp/registrar.go", "func (r *Registrar) Register", "server is nil")
 	assertContains("modeler/mcp/registrar_test.go", "session.CallTool", "session.ReadResource", "session.GetPrompt")
 	assertContains("config/app-dev-local.yaml", "aiconnector:", "mcp_server:")
-	assertContains("go.mod", "go 1.25.13", "github.com/grpc-kit/pkg v0.5.0", "github.com/modelcontextprotocol/go-sdk v1.7.0")
+	assertContains("go.mod", "go 1.25.13", "github.com/grpc-kit/pkg v0.5.0", "github.com/modelcontextprotocol/go-sdk v1.7.0", "google.golang.org/grpc v1.83.1")
 	assertNotContains("go.mod", "github.com/sirupsen/logrus")
 	assertContains("Makefile", ">> synchronize Go module dependencies", "@${GO} mod tidy")
 	assertContains("AGENTS.md", "## Shared Skills", "scripts/skills/skills/generate-release-changelog/SKILL.md")
@@ -225,6 +225,99 @@ func TestServiceTemplateRendersExtensions(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("parse generated Go files: %v", err)
+	}
+}
+
+func TestGenerateToRefusesExistingOutputWithoutModification(t *testing.T) {
+	output := filepath.Join(t.TempDir(), "existing")
+	if err := os.Mkdir(output, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(output, "keep.txt")
+	if err := os.WriteFile(marker, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	generator, err := New(config.Config{
+		Global: config.GlobalConfig{
+			Type:           TypeService,
+			ProductCode:    "demo",
+			ShortName:      "echo",
+			ReleaseVersion: "v0.5.0",
+			Repository:     "example.com/acme/echo",
+		},
+		Template: config.TemplateConfig{Service: config.TemplateService{APIVersion: "v1"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = generator.GenerateTo(output); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("GenerateTo() error = %v, want existing-output refusal", err)
+	}
+	body, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "keep" {
+		t.Fatalf("existing marker = %q, want unchanged", body)
+	}
+}
+
+func TestGenerateToPublishesRequestedDirectory(t *testing.T) {
+	output := filepath.Join(t.TempDir(), "nested", "custom-name")
+	generator, err := New(config.Config{
+		Global: config.GlobalConfig{
+			Type:           TypeService,
+			ProductCode:    "demo",
+			ShortName:      "echo",
+			ReleaseVersion: "v0.5.0",
+			Repository:     "example.com/acme/echo",
+			Organization:   "acme",
+			Appname:        "demo-echo-v1",
+			ServiceCode:    "echo.v1.demo",
+			ProtoPackage:   "acme.api.demo.echo.v1",
+			ServiceTitle:   "DemoEcho",
+		},
+		Template: config.TemplateConfig{Service: config.TemplateService{APIVersion: "v1"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = generator.GenerateTo(output); err != nil {
+		t.Fatalf("GenerateTo: %v", err)
+	}
+	if _, err = os.Stat(filepath.Join(output, "go.mod")); err != nil {
+		t.Fatalf("generated go.mod: %v", err)
+	}
+}
+
+func TestServiceTemplateDoesNotExposeStaticGoPackages(t *testing.T) {
+	root := filepath.Join("service")
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if !entry.IsDir() && filepath.Ext(path) == ".go" {
+			t.Errorf("template Go asset %s must use the .go.tmpl suffix", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestToolInstallerMatchesGeneratedServiceAsset(t *testing.T) {
+	rootInstaller, err := os.ReadFile(filepath.Join("..", "scripts", "binaries.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceInstaller, err := Assets.ReadFile("service/scripts/binaries.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(rootInstaller) != string(serviceInstaller) {
+		t.Fatal("root and generated-service tool installers have drifted")
 	}
 }
 

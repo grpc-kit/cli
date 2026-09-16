@@ -18,6 +18,7 @@ const (
 // Template 代码模版的接口定义
 type Template interface {
 	Generate() error
+	GenerateTo(output string) error
 }
 
 // New xx

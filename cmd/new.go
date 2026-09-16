@@ -19,12 +19,17 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/grpc-kit/cli/internal/buildinfo"
 	"github.com/grpc-kit/cli/template"
-	"github.com/grpc-kit/pkg/vars"
 	"github.com/spf13/cobra"
 )
 
+type newOptions struct {
+	output string
+}
+
 func newNewCommand() *cobra.Command {
+	options := newOptions{}
 	cmd := &cobra.Command{
 		Use:   "new",
 		Short: "Create a new code templates for your product",
@@ -33,7 +38,10 @@ it is newly created. For example:
 
 ./grpc-kit-cli new -t service -o default -p opsaid -s test1
 `,
-		RunE:          runFuncNew,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runFuncNew(cmd, options)
+		},
 		SilenceUsage:  true,
 		SilenceErrors: false,
 	}
@@ -43,11 +51,13 @@ it is newly created. For example:
 		"api-version", "v1", "api version, like: v1alpha1, v1beta1, v1")
 	cmd.Flags().StringVarP(&cfgType.Template.Service.Organization,
 		"organization", "o", "grpc-kit", "the company or department where the product is located")
+	cmd.Flags().StringVarP(&options.output,
+		"output", "d", "", "output directory (default: short-name)")
 
 	return cmd
 }
 
-func runFuncNew(cmd *cobra.Command, args []string) error {
+func runFuncNew(cmd *cobra.Command, options newOptions) error {
 	re := regexp.MustCompile(`^([a-z0-9]){4,}$`)
 
 	// 必须存在的参数校验
@@ -58,7 +68,7 @@ func runFuncNew(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("must set -s or --short-name")
 	}
 	if cfgType.Global.ReleaseVersion == "" {
-		cfgType.Global.ReleaseVersion = vars.ReleaseVersion
+		cfgType.Global.ReleaseVersion = buildinfo.ReleaseVersion
 		if cfgType.Global.ReleaseVersion == "" {
 			cfgType.Global.ReleaseVersion = "v0.0.0"
 		}
@@ -102,16 +112,20 @@ func runFuncNew(cmd *cobra.Command, args []string) error {
 			cfgType.Global.ShortName, cfgType.Template.Service.APIVersion, cfgType.Global.ProductCode)
 	}
 
-	fmt.Println(
-		fmt.Sprintf("Generate code templates type: %v, use git repos: %v",
-			cfgType.Global.Type, cfgType.Global.Repository))
+	if _, err := fmt.Fprintf(cmd.OutOrStdout(), "Generate code templates type: %v, use git repos: %v\n",
+		cfgType.Global.Type, cfgType.Global.Repository); err != nil {
+		return err
+	}
 
 	t, err := template.New(cfgType)
 	if err != nil {
 		return err
 	}
 
-	if err := t.Generate(); err != nil {
+	if options.output == "" {
+		options.output = cfgType.Global.ShortName
+	}
+	if err := t.GenerateTo(options.output); err != nil {
 		return err
 	}
 

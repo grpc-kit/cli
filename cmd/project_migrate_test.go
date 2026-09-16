@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grpc-kit/pkg/vars"
+	"github.com/grpc-kit/cli/internal/buildinfo"
 )
 
 func TestProjectMigrateRejectsExtraArguments(t *testing.T) {
@@ -24,9 +24,9 @@ func TestProjectMigrateRejectsExtraArguments(t *testing.T) {
 }
 
 func TestProjectMigratePreviewAllowsPrereleaseVersion(t *testing.T) {
-	previous := vars.ReleaseVersion
-	vars.ReleaseVersion = "0.3.9-beta.1"
-	t.Cleanup(func() { vars.ReleaseVersion = previous })
+	previous := buildinfo.ReleaseVersion
+	buildinfo.ReleaseVersion = "0.3.9-beta.1"
+	t.Cleanup(func() { buildinfo.ReleaseVersion = previous })
 
 	cmd := newRootCommand(func() error { return nil })
 	var output bytes.Buffer
@@ -43,9 +43,9 @@ func TestProjectMigratePreviewAllowsPrereleaseVersion(t *testing.T) {
 }
 
 func TestProjectMigrateRejectsInvalidProject(t *testing.T) {
-	previous := vars.ReleaseVersion
-	vars.ReleaseVersion = "0.3.9-beta.1"
-	t.Cleanup(func() { vars.ReleaseVersion = previous })
+	previous := buildinfo.ReleaseVersion
+	buildinfo.ReleaseVersion = "0.3.9-beta.1"
+	t.Cleanup(func() { buildinfo.ReleaseVersion = previous })
 
 	cmd := newRootCommand(func() error { return nil })
 	cmd.SetOut(io.Discard)
@@ -59,9 +59,9 @@ func TestProjectMigrateRejectsInvalidProject(t *testing.T) {
 }
 
 func TestProjectMigrateRejectsUnsupportedSource(t *testing.T) {
-	previous := vars.ReleaseVersion
-	vars.ReleaseVersion = "0.3.9-beta.1"
-	t.Cleanup(func() { vars.ReleaseVersion = previous })
+	previous := buildinfo.ReleaseVersion
+	buildinfo.ReleaseVersion = "0.3.9-beta.1"
+	t.Cleanup(func() { buildinfo.ReleaseVersion = previous })
 
 	root := writeCommandTestProject(t)
 	environmentPath := filepath.Join(root, "scripts", "env")
@@ -86,9 +86,9 @@ func TestProjectMigrateRejectsUnsupportedSource(t *testing.T) {
 }
 
 func TestProjectMigrateApplyRejectsPrereleaseBuild(t *testing.T) {
-	previous := vars.ReleaseVersion
-	vars.ReleaseVersion = "0.3.9-beta.1"
-	t.Cleanup(func() { vars.ReleaseVersion = previous })
+	previous := buildinfo.ReleaseVersion
+	buildinfo.ReleaseVersion = "0.3.9-beta.1"
+	t.Cleanup(func() { buildinfo.ReleaseVersion = previous })
 
 	cmd := newRootCommand(func() error { return nil })
 	cmd.SetOut(io.Discard)
@@ -102,9 +102,9 @@ func TestProjectMigrateApplyRejectsPrereleaseBuild(t *testing.T) {
 }
 
 func TestProjectMigrateApply(t *testing.T) {
-	previous := vars.ReleaseVersion
-	vars.ReleaseVersion = "0.4.0"
-	t.Cleanup(func() { vars.ReleaseVersion = previous })
+	previous := buildinfo.ReleaseVersion
+	buildinfo.ReleaseVersion = "0.4.0"
+	t.Cleanup(func() { buildinfo.ReleaseVersion = previous })
 
 	root := writeCommandTestProject(t)
 	for _, args := range [][]string{
