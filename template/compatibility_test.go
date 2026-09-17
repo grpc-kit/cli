@@ -72,8 +72,8 @@ func TestGeneratedServiceCompilesAgainstReleasedPkg(t *testing.T) {
 			pkgVersion = requirement.Mod.Version
 		}
 	}
-	if pkgVersion != "v0.5.0" {
-		t.Fatalf("generated pkg version = %q, want v0.5.0", pkgVersion)
+	if pkgVersion != "v0.5.1" {
+		t.Fatalf("generated pkg version = %q, want v0.5.1", pkgVersion)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)

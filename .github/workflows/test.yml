@@ -30,6 +30,7 @@ jobs:
           go-version: 1.25.13
           cache-dependency-path: go.sum
       - run: make test-compatibility PKG_COMPAT_VERSION=v0.5.0
+      - run: make test-compatibility PKG_COMPAT_VERSION=v0.5.1
 
   template-compatibility:
     runs-on: ubuntu-latest
@@ -44,8 +45,8 @@ jobs:
           make protoc
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.29.0
-          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.29.0
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.30.0
+          go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.30.0
       - name: Install protobuf include sources
         run: |
           mkdir -p "$(go env GOPATH)/src/github.com/grpc-kit"
@@ -56,5 +57,5 @@ jobs:
           git -C "$(go env GOPATH)/src/github.com/googleapis/googleapis" remote add origin https://github.com/googleapis/googleapis.git
           git -C "$(go env GOPATH)/src/github.com/googleapis/googleapis" fetch --depth 1 origin e0d0106516a5c613510533821e4508bc6c943b11
           git -C "$(go env GOPATH)/src/github.com/googleapis/googleapis" checkout --detach FETCH_HEAD
-          git clone --branch v2.29.0 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git "$(go env GOPATH)/src/github.com/grpc-ecosystem/grpc-gateway"
+          git clone --branch v2.30.0 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git "$(go env GOPATH)/src/github.com/grpc-ecosystem/grpc-gateway"
       - run: make test-template-compatibility
