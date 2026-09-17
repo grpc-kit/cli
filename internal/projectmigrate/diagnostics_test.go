@@ -55,7 +55,7 @@ var managed *logrus.Entry
 	if err != nil {
 		t.Fatal(err)
 	}
-	actions, err := ScanManualActions(project, map[string]struct{}{"managed.go": {}})
+	actions, err := ScanManualActions(project, map[string]struct{}{"managed.go": {}}, "0.4.0")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -5,7 +5,7 @@ set -euo pipefail
 readonly PROTOC_VERSION="21.12"
 readonly PROTOC_GEN_GO_VERSION="v1.36.11"
 readonly PROTOC_GEN_GO_GRPC_VERSION="v1.6.2"
-readonly GRPC_GATEWAY_VERSION="v2.29.0"
+readonly GRPC_GATEWAY_VERSION="v2.30.0"
 
 verify_sha256() {
   local checksum=$1 archive=$2

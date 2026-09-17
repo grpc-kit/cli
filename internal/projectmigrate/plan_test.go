@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -88,6 +89,162 @@ func TestBuildPlanDoesNotCreateMissingAssets(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, "handler", "microservice.go")); !os.IsNotExist(err) {
 		t.Fatalf("preview created a missing asset: %v", err)
 	}
+}
+
+func TestBuildPlanRewritesLegacyGenerateScript(t *testing.T) {
+	root := writePlanProject(t, false)
+	writeFile(t, filepath.Join(root, "scripts", "generate.sh"), legacyGenerateScriptFixture, 0o755)
+
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Status != StatusReady || plan.Blocked() {
+		t.Fatalf("plan status = %s, conflicts = %#v", plan.Status, plan.Conflicts)
+	}
+	wantChanges := []string{"scripts/env", "scripts/generate.sh"}
+	if got := changePaths(plan.Changes); !slices.Equal(got, wantChanges) {
+		t.Fatalf("change paths = %v, want %v", got, wantChanges)
+	}
+	target, err := renderGenerateScriptTarget("0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, change := range plan.Changes {
+		if change.Path != generateScriptPath {
+			continue
+		}
+		if !bytes.Equal(change.After, target) {
+			t.Fatal("generate.sh rewrite does not equal the rendered target")
+		}
+		marker, err := ParseMarkerLine(secondLine(change.After))
+		if err != nil || marker.Version != "0.4.0" || marker.CommentPrefix != "#" {
+			t.Fatalf("generate.sh rewrite marker = %#v, want script marker 0.4.0", marker)
+		}
+	}
+	if hasDiagnosticCode(plan.ManualActions, "generate_script_modified") {
+		t.Fatalf("planned rewrite also produced a manual action: %#v", plan.ManualActions)
+	}
+}
+
+func TestBuildPlanSkipsCurrentGenerateScript(t *testing.T) {
+	root := writePlanProject(t, false)
+	scriptPath := filepath.Join(root, "scripts", "generate.sh")
+	target, err := renderGenerateScriptTarget("0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, scriptPath, target, 0o755)
+
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := changePaths(plan.Changes); !slices.Equal(got, []string{"scripts/env"}) {
+		t.Fatalf("change paths = %v, want only scripts/env", got)
+	}
+	if hasDiagnosticCode(plan.ManualActions, "generate_script_modified") {
+		t.Fatalf("current content produced a manual action: %#v", plan.ManualActions)
+	}
+	body, err := os.ReadFile(scriptPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(body, target) {
+		t.Fatal("preview modified an up-to-date generate.sh")
+	}
+}
+
+func TestBuildPlanLeavesModifiedMarkedGenerateScriptToManualAction(t *testing.T) {
+	root := writePlanProject(t, false)
+	target, err := renderGenerateScriptTarget("0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(root, "scripts", "generate.sh"), append(bytes.Clone(target), []byte("# local edit\n")...), 0o755)
+
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Status != StatusReady || plan.Blocked() {
+		t.Fatalf("modified marked generate.sh must not block the plan: status = %s, conflicts = %#v", plan.Status, plan.Conflicts)
+	}
+	if got := changePaths(plan.Changes); !slices.Equal(got, []string{"scripts/env"}) {
+		t.Fatalf("change paths = %v, want only scripts/env", got)
+	}
+	if !hasDiagnostic(plan.ManualActions, "generate_script_modified", "scripts/generate.sh") {
+		t.Fatalf("manual actions = %#v, want generate_script_modified", plan.ManualActions)
+	}
+}
+
+func TestBuildPlanLeavesModifiedGenerateScriptToManualAction(t *testing.T) {
+	root := writePlanProject(t, false)
+	writeFile(t, filepath.Join(root, "scripts", "generate.sh"), append(bytes.Clone(legacyGenerateScriptFixture), []byte("# local edit\n")...), 0o755)
+
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Status != StatusReady || plan.Blocked() {
+		t.Fatalf("modified generate.sh must not block the plan: status = %s, conflicts = %#v", plan.Status, plan.Conflicts)
+	}
+	if got := changePaths(plan.Changes); !slices.Equal(got, []string{"scripts/env"}) {
+		t.Fatalf("change paths = %v, want only scripts/env", got)
+	}
+	if !hasDiagnostic(plan.ManualActions, "generate_script_modified", "scripts/generate.sh") {
+		t.Fatalf("manual actions = %#v, want generate_script_modified", plan.ManualActions)
+	}
+}
+
+func TestBuildPlanIgnoresMissingGenerateScript(t *testing.T) {
+	root := writePlanProject(t, false)
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := changePaths(plan.Changes); !slices.Equal(got, []string{"scripts/env"}) {
+		t.Fatalf("change paths = %v, want only scripts/env", got)
+	}
+	if hasDiagnosticCode(plan.ManualActions, "generate_script_modified") {
+		t.Fatalf("missing file produced a manual action: %#v", plan.ManualActions)
+	}
+}
+
+func TestBuildPlanConflictsWhenGenerateScriptPathIsUnsafe(t *testing.T) {
+	t.Run("directory", func(t *testing.T) {
+		root := writePlanProject(t, false)
+		if err := os.Mkdir(filepath.Join(root, "scripts", "generate.sh"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := BuildPlan(root, "0.4.0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plan.Status != StatusConflict || !hasDiagnostic(plan.Conflicts, "unsafe_file", "scripts/generate.sh") {
+			t.Fatalf("plan = %#v, want unsafe_file conflict", plan)
+		}
+	})
+	t.Run("symlink", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("symlink behavior requires elevated privileges on some Windows hosts")
+		}
+		root := writePlanProject(t, false)
+		target := filepath.Join(root, "actual-generate.sh")
+		if err := os.WriteFile(target, legacyGenerateScriptFixture, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, filepath.Join(root, "scripts", "generate.sh")); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := BuildPlan(root, "0.4.0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plan.Status != StatusConflict || !hasDiagnostic(plan.Conflicts, "unsafe_file", "scripts/generate.sh") {
+			t.Fatalf("plan = %#v, want unsafe_file conflict", plan)
+		}
+	})
 }
 
 func TestWritePlanIncludesUnifiedDiff(t *testing.T) {

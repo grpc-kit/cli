@@ -95,7 +95,7 @@ func BuildPlan(projectPath, targetCLIVersion string) (Plan, error) {
 				Path:    "scripts/env",
 				Message: fmt.Sprintf("source CLI version %s has no frozen compatibility assets", project.SourceCLIVersion),
 			})
-			plan.ManualActions, _ = ScanManualActions(project, nil)
+			plan.ManualActions, _ = ScanManualActions(project, nil, targetVersion)
 			return plan, nil
 		}
 		project.SourceFamily = "v0.3.8"
@@ -121,24 +121,43 @@ func BuildPlan(projectPath, targetCLIVersion string) (Plan, error) {
 		}
 		relativePath = filepath.ToSlash(relativePath)
 		_, isAsset := assetSet[relativePath]
+		isScriptPatch := relativePath == generateScriptPath
 		if entry.IsDir() {
 			if entry.Name() == ".git" {
 				return filepath.SkipDir
 			}
-			if isAsset || relativePath == legacyPublicEmbedPath {
+			if isAsset || relativePath == legacyPublicEmbedPath || isScriptPatch {
 				plan.Conflicts = append(plan.Conflicts, Diagnostic{Code: "unsafe_file", Path: relativePath, Message: "managed path is a directory"})
 			}
 			return nil
 		}
 		if entry.Type()&os.ModeSymlink != 0 {
-			if isAsset || relativePath == legacyPublicEmbedPath {
+			if isAsset || relativePath == legacyPublicEmbedPath || isScriptPatch {
 				plan.Conflicts = append(plan.Conflicts, Diagnostic{Code: "unsafe_file", Path: relativePath, Message: "managed path is a symlink"})
 			}
 			return nil
 		}
 		if !entry.Type().IsRegular() {
-			if isAsset {
+			if isAsset || isScriptPatch {
 				plan.Conflicts = append(plan.Conflicts, Diagnostic{Code: "unsafe_file", Path: relativePath, Message: "managed path is not a regular file"})
+			}
+			return nil
+		}
+		if isScriptPatch {
+			body, err := readRegularFile(currentPath, maxManagedFileSize)
+			if err != nil {
+				return fmt.Errorf("read managed file %s: %w", relativePath, err)
+			}
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			target, err := renderGenerateScriptTarget(targetVersion)
+			if err != nil {
+				return fmt.Errorf("render managed file %s: %w", relativePath, err)
+			}
+			if change, _ := planGenerateScript(body, info.Mode(), target); change != nil {
+				plan.Changes = append(plan.Changes, *change)
 			}
 			return nil
 		}
@@ -240,7 +259,7 @@ func BuildPlan(projectPath, targetCLIVersion string) (Plan, error) {
 	for _, change := range plan.Changes {
 		changedPaths[change.Path] = struct{}{}
 	}
-	manualActions, diagnosticsErr := ScanManualActions(project, changedPaths)
+	manualActions, diagnosticsErr := ScanManualActions(project, changedPaths, targetVersion)
 	if diagnosticsErr != nil {
 		plan.Warnings = append(plan.Warnings, Diagnostic{Code: "diagnostics_failed", Message: diagnosticsErr.Error()})
 	} else {

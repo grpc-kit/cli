@@ -10,6 +10,7 @@ package template
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -71,8 +72,8 @@ func TestGeneratedServiceCompilesAgainstReleasedPkg(t *testing.T) {
 			pkgVersion = requirement.Mod.Version
 		}
 	}
-	if pkgVersion != "v0.5.0" {
-		t.Fatalf("generated pkg version = %q, want v0.5.0", pkgVersion)
+	if pkgVersion != "v0.5.1" {
+		t.Fatalf("generated pkg version = %q, want v0.5.1", pkgVersion)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
@@ -82,11 +83,8 @@ func TestGeneratedServiceCompilesAgainstReleasedPkg(t *testing.T) {
 		t.Fatalf("go env GOPATH: %v", err)
 	}
 	environment := append(os.Environ(), "GOPATH="+strings.TrimSpace(string(gopathOutput)), "GOWORK=off")
-	for _, command := range [][]string{
-		{"make", "generate"},
-		{"go", "test", "./...", "-count=1"},
-		{"go", "build", "./..."},
-	} {
+	run := func(command ...string) {
+		t.Helper()
 		process := exec.CommandContext(ctx, command[0], command[1:]...)
 		process.Dir = root
 		process.Env = environment
@@ -94,4 +92,53 @@ func TestGeneratedServiceCompilesAgainstReleasedPkg(t *testing.T) {
 			t.Fatalf("%s: %v\n%s", strings.Join(command, " "), runErr, output)
 		}
 	}
+	run("make", "generate")
+
+	swaggerBody, err := os.ReadFile(filepath.Join(root, "public", "openapi", "microservice.swagger.json"))
+	if err != nil {
+		t.Fatalf("read generated OpenAPI v2 document: %v", err)
+	}
+	var swagger map[string]any
+	if err = json.Unmarshal(swaggerBody, &swagger); err != nil {
+		t.Fatalf("parse generated OpenAPI v2 document: %v", err)
+	}
+	definitions, ok := swagger["definitions"].(map[string]any)
+	if !ok {
+		t.Fatal("generated OpenAPI v2 document has no definitions object")
+	}
+	for _, name := range []string{"v1ErrorResponse", "statusV1Status", "protobufAny"} {
+		if _, exists := definitions[name]; !exists {
+			t.Errorf("generated OpenAPI v2 document is missing definition %q", name)
+		}
+	}
+	var validateRefs func(any)
+	validateRefs = func(value any) {
+		switch typed := value.(type) {
+		case map[string]any:
+			for key, child := range typed {
+				if key == "$ref" {
+					ref, refOK := child.(string)
+					if !refOK || !strings.HasPrefix(ref, "#/definitions/") {
+						t.Errorf("generated OpenAPI v2 document contains non-local reference %v", child)
+						continue
+					}
+					name := strings.TrimPrefix(ref, "#/definitions/")
+					if _, exists := definitions[name]; !exists {
+						t.Errorf("generated OpenAPI v2 document contains unresolved reference %q", ref)
+					}
+					continue
+				}
+				validateRefs(child)
+			}
+		case []any:
+			for _, child := range typed {
+				validateRefs(child)
+			}
+		}
+	}
+	validateRefs(swagger)
+	t.Log("validated generated OpenAPI v2 document and local schema references")
+
+	run("go", "test", "./...", "-count=1")
+	run("go", "build", "./...")
 }

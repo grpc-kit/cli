@@ -167,6 +167,65 @@ func TestVerifyChangeInputDetectsMutation(t *testing.T) {
 	}
 }
 
+func TestApplyRewritesLegacyGenerateScript(t *testing.T) {
+	root := writePlanProject(t, true)
+	writeFile(t, filepath.Join(root, "scripts", "generate.sh"), legacyGenerateScriptFixture, 0o755)
+	initGitRepository(t, root)
+	beforeSnapshot := snapshotProject(t, root)
+
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Status != StatusReady || len(plan.ApplyBlockers) != 0 {
+		t.Fatalf("plan status = %s, blockers = %#v", plan.Status, plan.ApplyBlockers)
+	}
+	if got := changePaths(plan.Changes); len(got) != 7 {
+		t.Fatalf("change paths = %v, want 7 managed files", got)
+	}
+	if err := Apply(context.Background(), &plan); err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+	if plan.Status != StatusApplied {
+		t.Fatalf("Apply() status = %s", plan.Status)
+	}
+	afterSnapshot := snapshotProject(t, root)
+	assertOnlyPlannedChanges(t, beforeSnapshot, afterSnapshot, plan.Changes)
+	scriptBody, err := os.ReadFile(filepath.Join(root, "scripts", "generate.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected, err := renderGenerateScriptTarget("0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(scriptBody, expected) {
+		t.Fatal("generate.sh was not rewritten to the rendered target content")
+	}
+	marker, err := ParseMarkerLine(secondLine(scriptBody))
+	if err != nil || marker.Version != "0.4.0" || marker.CommentPrefix != "#" {
+		t.Fatalf("migrated generate.sh marker = %#v, want script marker 0.4.0", marker)
+	}
+	info, err := os.Stat(filepath.Join(root, "scripts", "generate.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Fatalf("generate.sh mode = %o, want 755", info.Mode().Perm())
+	}
+
+	second, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Status != StatusManagedUpToDate || len(second.Changes) != 0 {
+		t.Fatalf("second plan status = %s, changes = %v", second.Status, changePaths(second.Changes))
+	}
+	if err := Apply(context.Background(), &second); err != nil {
+		t.Fatalf("idempotent Apply() error = %v", err)
+	}
+}
+
 func initGitRepository(t *testing.T, root string) {
 	t.Helper()
 	commands := [][]string{
