@@ -33,6 +33,7 @@
 4. 新增 pkg 迁移目标时保留旧目标资产和回归测试。不要原地把 `v0.5.0` 资产目录解释成 `v0.6.0`。
 5. 用户管理文件中的破坏点进入 `ManualAction`。诊断应提供稳定 code、文件、行号和建议，并排除本次 Change Plan 已整体替换的路径。
 6. logrus/slog 用户源码可以推荐使用 grpc-kit 共享技能 `migrate-logrus-to-slog`。技能由用户显式授权 AI 编辑并负责语义迁移、依赖清理和完整项目验证；它不是 CLI 自动写入能力，也不能让未托管文件进入 Change Plan。
+7. `scripts/generate.sh` 的 marker 位于第二行（首行是 shebang），自 0.5.1 起服务模板与迁移产物都携带它。在此之前生成的副本没有 marker，属于 marker 规则的唯一内容证据窄例外：托管仅凭"路径精确 + 全文 SHA-256 命中冻结摘要"授权整文件改写，写回内容为按 `{{ .TargetCLIVersion }}` 渲染的最新模板资产（嵌入式资产须与 `template/service/scripts/generate.sh.tmpl` 的渲染结果逐字节一致，有测试门禁），并补上第二行 marker。历史摘要只收纳无 marker 世代（v0.3.8 已冻结；v0.3.9-beta.1 因离线无法核对 tag 内容暂未冻结，此类副本走 `generate_script_modified` ManualAction 兜底）。未知内容不进入 Change Plan，只提示人工核对；文件缺失不创建。后续修改 `generate.sh.tmpl` 时必须同步重冻结嵌入资产并更新 `generateScriptAssetSHA256`；对已携带 marker 的 0.5.1+ 世代，后续版本应把 marker 识别扩展到"shebang + 第二行"走常规托管，不再向 legacy 摘要表积累条目。该规则也在 `internal/projectmigrate/scriptpatch.go` 文件头注释中记录。
 
 ## 4. 正式 pkg 兼容矩阵
 
