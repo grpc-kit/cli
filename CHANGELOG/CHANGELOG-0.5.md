@@ -9,6 +9,18 @@
 | Fixed      | 功能的修复                  |
 | Security   | 有关安全问题的修复              |
 
+## [Unreleased]
+
+### Changed
+
+- 将 CLI 与新服务模板使用的 `protoc-gen-grpc-gateway`、`protoc-gen-openapiv2`、grpc-gateway runtime 和 Docker include 源统一升级到 `v2.30.0`；同步将模板直接使用的 OpenTelemetry 模块提升到 `v1.45.0`，满足新版本依赖下限。
+
+### Fixed
+
+- 修复服务模板在 `protoc-gen-openapiv2 v2.30.0` 下生成的 4xx/5xx 公共 `ErrorResponse` `$ref` 无法解析的问题：生成脚本启用 `allow_merge`，显式输入 `${GOPATH}/src/github.com/grpc-kit/api/known/status/v1/response.proto`，并将合并后的 `microservice.swagger.json` 直接输出到 `public/openapi/`；新增 `$ref` 完整性与关键公共 schema 回归门禁。
+- 该问题的已知版本边界为 grpc-gateway `v2.27.5` 起；`v2.27.4` 仅用于说明问题边界，不作为实施或应急回滚方案，模板升级并固定使用当前 `v2.30.0` 工具链。
+- HTTP 路由继续独立维护在 `microservice.gateway.yaml`，运行时错误响应契约和 gateway 代码不变。官方 `protoc-gen-openapiv3` 当前不读取该外部配置，因此 OpenAPI v3 条件生成延后，不随本次修复发布。
+
 ## [0.5.0] - 2026-09-16
 
 ### Added
