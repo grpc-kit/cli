@@ -18,7 +18,9 @@ RUN apt-get update \
 
 # 设置环境变量
 ENV GO111MODULE=on
-ENV GOPROXY="https://goproxy.cn"
+# GOPROXY 可由构建参数覆盖：本地默认 goproxy.cn，GitHub Actions 传 proxy.golang.org
+ARG GOPROXY=https://goproxy.cn
+ENV GOPROXY=${GOPROXY}
 
 # 拷贝当前源代码至 src 目录
 WORKDIR /usr/local/src
