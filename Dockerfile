@@ -40,7 +40,7 @@ RUN go mod download \
 	&& git -C $GOPATH/src/github.com/googleapis/googleapis remote add origin https://github.com/googleapis/googleapis.git \
 	&& git -C $GOPATH/src/github.com/googleapis/googleapis fetch --depth 1 origin e0d0106516a5c613510533821e4508bc6c943b11 \
 	&& git -C $GOPATH/src/github.com/googleapis/googleapis checkout --detach FETCH_HEAD \
-    && git clone -b v2.29.0 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway
+    && git clone -b v2.30.0 --depth 1 https://github.com/grpc-ecosystem/grpc-gateway.git $GOPATH/src/github.com/grpc-ecosystem/grpc-gateway
 
 # 用于 go 应用的编译
 FROM --platform=$TARGETPLATFORM ${GO_IMAGE}
