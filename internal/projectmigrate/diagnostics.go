@@ -36,7 +36,9 @@ var printfLoggerMethods = map[string]struct{}{
 
 // ScanManualActions reports known pkg v0.5.0 incompatibilities without
 // modifying source. Paths already replaced by the managed plan are excluded.
-func ScanManualActions(project Project, changedPaths map[string]struct{}) ([]Diagnostic, error) {
+// targetCLIVersion is the migration target used to recognize up-to-date
+// generate.sh content.
+func ScanManualActions(project Project, changedPaths map[string]struct{}, targetCLIVersion string) ([]Diagnostic, error) {
 	actions, err := scanGoModActions(project)
 	if err != nil {
 		return nil, err
@@ -44,6 +46,9 @@ func ScanManualActions(project Project, changedPaths map[string]struct{}) ([]Dia
 	dedup := make(map[string]struct{})
 	for _, action := range actions {
 		dedup[diagnosticKey(action)] = struct{}{}
+	}
+	if err := scanGenerateScriptAction(project, changedPaths, &actions, dedup, targetCLIVersion); err != nil {
+		return nil, err
 	}
 	err = filepath.WalkDir(project.Root, func(currentPath string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
