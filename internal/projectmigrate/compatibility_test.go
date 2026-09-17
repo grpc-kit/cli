@@ -68,7 +68,7 @@ func TestCompatibilityAssetsCompileAgainstReleasedPkg(t *testing.T) {
 go ` + currentTargetGoVersion + `
 
 require (
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/grpc-kit/pkg ` + pkgVersion + `
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
