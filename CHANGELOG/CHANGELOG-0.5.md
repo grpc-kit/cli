@@ -9,6 +9,12 @@
 | Fixed      | 功能的修复                  |
 | Security   | 有关安全问题的修复              |
 
+## [Unreleased]
+
+### Fixed
+
+- `project migrate` 补齐 `v0.3.9-beta.1` 项目中已有且首行受管的 `modeler/independent_option.go` 兼容资产，使其可从 logrus 签名迁移到 `pkg v0.5.0` 所需的 slog 签名，不再产生 `unmapped_managed_file` conflict。`v0.3.8` 写集保持不变，且缺失该文件时仍不会创建。
+
 ## [0.5.1] - 2026-09-17
 
 ### Changed
