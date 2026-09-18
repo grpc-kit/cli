@@ -180,8 +180,8 @@ func TestApplyRewritesLegacyGenerateScript(t *testing.T) {
 	if plan.Status != StatusReady || len(plan.ApplyBlockers) != 0 {
 		t.Fatalf("plan status = %s, blockers = %#v", plan.Status, plan.ApplyBlockers)
 	}
-	if got := changePaths(plan.Changes); len(got) != 7 {
-		t.Fatalf("change paths = %v, want 7 managed files", got)
+	if got := changePaths(plan.Changes); len(got) != 8 {
+		t.Fatalf("change paths = %v, want 8 managed files", got)
 	}
 	if err := Apply(context.Background(), &plan); err != nil {
 		t.Fatalf("Apply() error = %v", err)

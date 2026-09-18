@@ -51,6 +51,28 @@ func TestBuildPlanForSpiderShape(t *testing.T) {
 	}
 }
 
+func TestBuildPlanMigratesV039IndependentOption(t *testing.T) {
+	root := writePlanProject(t, false)
+	writeManagedStub(t, root, independentOptionPath, "0.3.9-beta.1", "modeler")
+
+	plan, err := BuildPlan(root, "0.4.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Status != StatusReady || plan.Blocked() {
+		t.Fatalf("BuildPlan() status = %s, conflicts = %#v", plan.Status, plan.Conflicts)
+	}
+	wantChanges := []string{independentOptionPath, "scripts/env"}
+	if got := changePaths(plan.Changes); !slices.Equal(got, wantChanges) {
+		t.Fatalf("change paths = %v, want %v", got, wantChanges)
+	}
+	for _, change := range plan.Changes {
+		if change.Path == independentOptionPath && !bytes.Contains(change.After, []byte(`"log/slog"`)) {
+			t.Fatalf("%s was not migrated to slog:\n%s", independentOptionPath, change.After)
+		}
+	}
+}
+
 func TestBuildPlanRejectsUnmappedManagedFile(t *testing.T) {
 	root := writePlanProject(t, false)
 	writeManagedStub(t, root, "old/generated.go", "0.3.8", "old")
@@ -273,6 +295,7 @@ func writePlanProject(t *testing.T, allManaged bool) string {
 		writeManagedStub(t, root, "handler/register.go", "0.3.9-beta.1", "handler")
 		writeManagedStub(t, root, "handler/rpc_internal.go", "0.3.8-beta.1", "handler")
 		writeManagedStub(t, root, "handler/shutdown.go", "0.3.9-beta.1", "handler")
+		writeManagedStub(t, root, independentOptionPath, "0.3.9-beta.1", "modeler")
 	}
 	return root
 }

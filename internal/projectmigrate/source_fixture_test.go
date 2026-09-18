@@ -38,6 +38,21 @@ func TestCLIV038SourceFixture(t *testing.T) {
 	}
 }
 
+func TestGoChatSourceFixture(t *testing.T) {
+	fixture := GoChatSourceFixture()
+	if fixture.Commit != gochatFixtureCommit || fixture.ProjectCLIVersion != "0.3.9-beta.1" || len(fixture.Files) != 8 {
+		t.Fatalf("GoChatSourceFixture() = %#v", fixture)
+	}
+	const independentOptionSHA256 = "ab9c17cfc71974101dab19696caa8d4e743781f9d5cf4fa64667ee1d5bb84239"
+	if fixture.Files[independentOptionPath] != independentOptionSHA256 {
+		t.Fatalf("GoChatSourceFixture()[%q] = %q", independentOptionPath, fixture.Files[independentOptionPath])
+	}
+	fixture.Files[independentOptionPath] = "changed"
+	if GoChatSourceFixture().Files[independentOptionPath] != independentOptionSHA256 {
+		t.Fatal("GoChatSourceFixture returned mutable package state")
+	}
+}
+
 func TestIsKnownLegacyMarkerFile(t *testing.T) {
 	if !IsKnownLegacyMarkerFile(legacyPublicEmbedPath, []byte(legacyPublicEmbedFixture)) {
 		t.Fatal("exact frozen fixture was not recognized")

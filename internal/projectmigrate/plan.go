@@ -98,7 +98,10 @@ func BuildPlan(projectPath, targetCLIVersion string) (Plan, error) {
 			plan.ManualActions, _ = ScanManualActions(project, nil, targetVersion)
 			return plan, nil
 		}
-		project.SourceFamily = "v0.3.8"
+		// A migrated marker records the target CLI version, not the historical
+		// source family. Use the union of assets that this target may have
+		// written so a second preview remains idempotent.
+		project.SourceFamily = migratedSourceFamily
 		plan.Project.SourceFamily = project.SourceFamily
 	}
 	assetPaths, err := CompatibilityAssetPaths(project.SourceFamily)

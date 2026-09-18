@@ -25,9 +25,14 @@ import (
 	"text/template"
 )
 
-const compatibilityAssetRoot = "assets/v0_5_0/v0_3_8"
+const (
+	cliV038CompatibilityAssetRoot = "assets/v0_5_0/v0_3_8"
+	cliV039CompatibilityAssetRoot = "assets/v0_5_0/v0_3_9_beta_1"
+	independentOptionPath         = "modeler/independent_option.go"
+	migratedSourceFamily          = "migrated"
+)
 
-var compatibilityAssetPaths = []string{
+var cliV038CompatibilityAssetPaths = []string{
 	"cmd/server/main.go",
 	"handler/microservice.go",
 	"handler/register.go",
@@ -36,7 +41,7 @@ var compatibilityAssetPaths = []string{
 	"scripts/env",
 }
 
-//go:embed assets/v0_5_0/v0_3_8
+//go:embed assets/v0_5_0
 var compatibilityAssets embed.FS
 
 type assetData struct {
@@ -51,10 +56,15 @@ type assetData struct {
 // CompatibilityAssetPaths returns the existing paths that the selected source
 // family can map to pkg v0.5.0-compatible managed content.
 func CompatibilityAssetPaths(sourceFamily string) ([]string, error) {
-	if !hasCompatibilityAssets(sourceFamily) {
+	switch sourceFamily {
+	case "v0.3.8":
+		return append([]string(nil), cliV038CompatibilityAssetPaths...), nil
+	case "v0.3.9-beta.1", migratedSourceFamily:
+		paths := append([]string(nil), cliV038CompatibilityAssetPaths...)
+		return append(paths, independentOptionPath), nil
+	default:
 		return nil, fmt.Errorf("source family %q has no frozen compatibility assets", sourceFamily)
 	}
-	return append([]string(nil), compatibilityAssetPaths...), nil
 }
 
 // RenderCompatibilityAsset renders one frozen asset entirely in memory.
@@ -62,14 +72,15 @@ func RenderCompatibilityAsset(project Project, relativePath, targetCLIVersion st
 	if !hasCompatibilityAssets(project.SourceFamily) {
 		return nil, fmt.Errorf("source family %q has no frozen compatibility assets", project.SourceFamily)
 	}
-	if !containsAssetPath(relativePath) {
+	assetRoot, ok := compatibilityAssetRoot(project.SourceFamily, relativePath)
+	if !ok {
 		return nil, fmt.Errorf("path %q has no compatibility asset", relativePath)
 	}
 	version, err := normalizeTargetCLIVersion(targetCLIVersion)
 	if err != nil {
 		return nil, fmt.Errorf("target CLI version: %w", err)
 	}
-	templatePath := path.Join(compatibilityAssetRoot, relativePath+".tmpl")
+	templatePath := path.Join(assetRoot, relativePath+".tmpl")
 	body, err := compatibilityAssets.ReadFile(templatePath)
 	if err != nil {
 		return nil, fmt.Errorf("read compatibility asset %s: %w", relativePath, err)
@@ -107,16 +118,19 @@ func RenderCompatibilityAsset(project Project, relativePath, targetCLIVersion st
 }
 
 func hasCompatibilityAssets(sourceFamily string) bool {
-	return sourceFamily == "v0.3.8" || sourceFamily == "v0.3.9-beta.1"
+	return sourceFamily == "v0.3.8" || sourceFamily == "v0.3.9-beta.1" || sourceFamily == migratedSourceFamily
 }
 
-func containsAssetPath(relativePath string) bool {
-	for _, candidate := range compatibilityAssetPaths {
+func compatibilityAssetRoot(sourceFamily, relativePath string) (string, bool) {
+	for _, candidate := range cliV038CompatibilityAssetPaths {
 		if candidate == relativePath {
-			return true
+			return cliV038CompatibilityAssetRoot, true
 		}
 	}
-	return false
+	if (sourceFamily == "v0.3.9-beta.1" || sourceFamily == migratedSourceFamily) && relativePath == independentOptionPath {
+		return cliV039CompatibilityAssetRoot, true
+	}
+	return "", false
 }
 
 func firstLine(body []byte) string {

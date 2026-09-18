@@ -22,6 +22,7 @@ import (
 const (
 	cliV038FixtureCommit    = "1270ce7cccf60ae3d9358d24cb48e84097b36c06"
 	spiderFixtureCommit     = "a5af60793e996f8072d9c9444287c4059784b1bd"
+	gochatFixtureCommit     = "f1cb0fad384736f5a7a597ae41729e8133408c2e"
 	legacyPublicEmbedPath   = "public/embed.go"
 	legacyPublicEmbedSHA256 = "43e669ebe9a037964f803ebe000e62f6c25e1876e2b3e2d1ca12f4d84444f040"
 )
@@ -49,6 +50,22 @@ var spiderSourceFixture = SourceFixture{
 	},
 }
 
+var gochatSourceFixture = SourceFixture{
+	Name:              "gochat",
+	Commit:            gochatFixtureCommit,
+	ProjectCLIVersion: "0.3.9-beta.1",
+	Files: map[string]string{
+		"scripts/env":             "df7a28d131e024a70400513649ebbf1e59a60f3a9a1b9755422b4934b4464b3f",
+		"cmd/server/main.go":      "37cfc90fde3b5b038ea76daf0886f99ebff2e9ee4133067c7d35fcb8ef8af6c8",
+		"handler/microservice.go": "38bace39a46d0029f1a7d69cad75b1bca072cc2bf9ff9eb4c621802858757dbc",
+		"handler/register.go":     "5be4e83c41ab4b335030998091d3e8fffa5c963cf0c01fb4de0d91f90c3682e0",
+		"handler/rpc_internal.go": "5c754df6558622824e1ad3331126829a46a47bfd101a49b1148b6a86b5d200b1",
+		"handler/shutdown.go":     "378dfa53f5658540c1c3e9514aa46d2a75437ced2f27ab2658dc5b964f5038ce",
+		independentOptionPath:     "ab9c17cfc71974101dab19696caa8d4e743781f9d5cf4fa64667ee1d5bb84239",
+		legacyPublicEmbedPath:     legacyPublicEmbedSHA256,
+	},
+}
+
 var cliV038SourceFixture = SourceFixture{
 	Name:              "cli-v0.3.8",
 	Commit:            cliV038FixtureCommit,
@@ -72,6 +89,12 @@ func CLIV038SourceFixture() SourceFixture {
 // SpiderSourceFixture returns a defensive copy of the frozen source evidence.
 func SpiderSourceFixture() SourceFixture {
 	return cloneSourceFixture(spiderSourceFixture)
+}
+
+// GoChatSourceFixture returns a defensive copy of the frozen source evidence
+// for the v0.3.9-beta.1 generation that includes independent_option.go.
+func GoChatSourceFixture() SourceFixture {
+	return cloneSourceFixture(gochatSourceFixture)
 }
 
 func cloneSourceFixture(source SourceFixture) SourceFixture {

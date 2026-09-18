@@ -52,9 +52,13 @@ func TestCompatibilityAssetsCompileAgainstReleasedPkg(t *testing.T) {
 		ProductCode:  "oneops",
 		ShortName:    "spider",
 		APIVersion:   "v1",
-		SourceFamily: "v0.3.8",
+		SourceFamily: "v0.3.9-beta.1",
 	}
-	for _, relativePath := range compatibilityAssetPaths {
+	assetPaths, err := CompatibilityAssetPaths(project.SourceFamily)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, relativePath := range assetPaths {
 		body, err := RenderCompatibilityAsset(project, relativePath, "0.4.0")
 		if err != nil {
 			t.Fatalf("render %s: %v", relativePath, err)
@@ -68,6 +72,7 @@ func TestCompatibilityAssetsCompileAgainstReleasedPkg(t *testing.T) {
 go ` + currentTargetGoVersion + `
 
 require (
+	entgo.io/ent v0.14.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/grpc-kit/pkg ` + pkgVersion + `
 	github.com/spf13/pflag v1.0.10
@@ -80,12 +85,15 @@ require (
 import (
 	"context"
 	"log/slog"
-)
 
-type ClientIndependentOption func(*IndependentCfg)
+	"example.com/oneops/spider/modeler/ent"
+	"example.com/oneops/spider/modeler/flow"
+)
 
 type IndependentCfg struct {
 	logger *slog.Logger
+	db     *ent.Client
+	flow   *flow.Client
 }
 
 func (c *IndependentCfg) Init(ctx context.Context, opts ...ClientIndependentOption) error {
@@ -94,6 +102,39 @@ func (c *IndependentCfg) Init(ctx context.Context, opts ...ClientIndependentOpti
 		opt(c)
 	}
 	return nil
+}
+`,
+		"modeler/ent/ent.go": `package ent
+
+import entsql "entgo.io/ent/dialect/sql"
+
+type Client struct{}
+type Option func(*Client)
+
+func Driver(*entsql.Driver) Option {
+	return func(*Client) {}
+}
+
+func NewClient(options ...Option) *Client {
+	client := &Client{}
+	for _, option := range options {
+		option(client)
+	}
+	return client
+}
+`,
+		"modeler/flow/flow.go": `package flow
+
+import (
+	"log/slog"
+
+	"github.com/grpc-kit/pkg/cfg"
+)
+
+type Client struct{}
+
+func NewClient(*slog.Logger, *cfg.FlowClientConfig) (*Client, error) {
+	return &Client{}, nil
 }
 `,
 		"handler/private.go": `package handler

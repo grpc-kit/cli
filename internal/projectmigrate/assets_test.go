@@ -18,8 +18,8 @@ func TestRenderCompatibilityAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(paths) != 6 {
-		t.Fatalf("CompatibilityAssetPaths() returned %d paths, want 6", len(paths))
+	if len(paths) != 7 {
+		t.Fatalf("CompatibilityAssetPaths() returned %d paths, want 7", len(paths))
 	}
 
 	rendered := make(map[string][]byte, len(paths))
@@ -43,7 +43,24 @@ func TestRenderCompatibilityAssets(t *testing.T) {
 	assertAssetContains(t, rendered, "handler/register.go", "HTTPHandlerFrontend(ctx, mux", "StartBackground(ctx)", "RegisterOneopsSpiderServer")
 	assertAssetNotContains(t, rendered, "handler/register.go", "privateMCPHandle", "modeler/mcp")
 	assertAssetContains(t, rendered, "handler/shutdown.go", "WarnContext(ctx", "Deregister(ctx)")
+	assertAssetContains(t, rendered, independentOptionPath, `"log/slog"`, `"git.lmq.io/kaopuvm/spider/modeler/ent"`, `flow.NewClient(logger, fcc)`)
+	assertAssetNotContains(t, rendered, independentOptionPath, "logrus")
 	assertAssetContains(t, rendered, "scripts/env", "CLI_VERSION=0.4.0", "PRODUCT_CODE=oneops", "SHORT_NAME=spider")
+}
+
+func TestCompatibilityAssetPathsKeepV038WriteSetNarrow(t *testing.T) {
+	paths, err := CompatibilityAssetPaths("v0.3.8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 6 {
+		t.Fatalf("CompatibilityAssetPaths() returned %d paths, want 6", len(paths))
+	}
+	for _, relativePath := range paths {
+		if relativePath == independentOptionPath {
+			t.Fatalf("v0.3.8 paths unexpectedly contain %s", independentOptionPath)
+		}
+	}
 }
 
 func TestRenderCompatibilityAssetRejectsUnsupportedInputs(t *testing.T) {
@@ -61,6 +78,7 @@ func TestRenderCompatibilityAssetRejectsUnsupportedInputs(t *testing.T) {
 		version string
 	}{
 		{name: "unknown path", project: project, path: "handler/private.go", version: "0.4.0"},
+		{name: "path from another source family", project: project, path: independentOptionPath, version: "0.4.0"},
 		{name: "development target", project: project, path: "handler/shutdown.go", version: "0.0.0"},
 		{name: "unknown source family", project: func() Project { p := project; p.SourceFamily = "v0.4.0"; return p }(), path: "handler/shutdown.go", version: "0.4.0"},
 	}
